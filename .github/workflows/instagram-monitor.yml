@@ -1,0 +1,34 @@
+name: Instagram Monitor
+
+on:
+  schedule:
+    - cron: "0 11 * * *"   # roda todo dia às 08h no Brasil (UTC-3)
+  workflow_dispatch:
+
+jobs:
+  run-monitor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Restaurar credentials.json
+        run: |
+          echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
+
+      - name: Restaurar sessão do Instagram
+        run: |
+          mkdir -p ~/.config/instaloader
+          echo '${{ secrets.INSTAGRAM_SESSION }}' > ~/.config/instaloader/session-accountverificarseguidor
+
+      - name: Rodar monitor
+        run: python main.py
