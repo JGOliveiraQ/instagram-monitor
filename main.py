@@ -16,12 +16,14 @@ print("Carregando sessão do Instagram...")
 L = instaloader.Instaloader()
 
 try:
-    L.load_session_from_file(IG_USERNAME)
+    L.load_session_from_file(
+        IG_USERNAME,
+        filename="session-accountverificarseguidor"
+    )
     print("✅ Sessão carregada com sucesso")
 except Exception as e:
     print("❌ Erro ao carregar sessão:", e)
     exit()
-
 # ============================================
 # GOOGLE SHEETS
 # ============================================
