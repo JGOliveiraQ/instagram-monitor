@@ -1,4 +1,3 @@
-import os
 import time
 import instaloader
 import gspread
@@ -7,21 +6,20 @@ from datetime import datetime
 from config import CLIENTES
 
 # ============================================
-# INSTAGRAM LOGIN (via GitHub Secrets)
+# INSTAGRAM (sessão salva)
 # ============================================
 
-IG_USERNAME = os.getenv("IG_USERNAME")
-IG_PASSWORD = os.getenv("IG_PASSWORD")
+IG_USERNAME = "accountverificarseguidor"
 
-print("Fazendo login no Instagram...")
+print("Carregando sessão do Instagram...")
 
 L = instaloader.Instaloader()
 
 try:
-    L.login(IG_USERNAME, IG_PASSWORD)
-    print("✅ Login feito com sucesso")
+    L.load_session_from_file(IG_USERNAME)
+    print("✅ Sessão carregada com sucesso")
 except Exception as e:
-    print("❌ Erro no login:", e)
+    print("❌ Erro ao carregar sessão:", e)
     exit()
 
 # ============================================
@@ -75,7 +73,6 @@ for usuario in CLIENTES:
         ])
 
         print("✅ Salvo com sucesso")
-
         time.sleep(8)
 
     except Exception as e:
