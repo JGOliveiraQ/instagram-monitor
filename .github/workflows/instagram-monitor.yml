@@ -2,7 +2,7 @@ name: Instagram Monitor
 
 on:
   schedule:
-    - cron: "0 11 * * *"   # roda todo dia às 08h no Brasil (UTC-3)
+    - cron: "0 11 * * *"
   workflow_dispatch:
 
 jobs:
@@ -25,10 +25,8 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
 
-      - name: Restaurar sessão do Instagram
-        run: |
-          mkdir -p ~/.config/instaloader
-          echo '${{ secrets.INSTAGRAM_SESSION }}' > ~/.config/instaloader/session-accountverificarseguidor
-
       - name: Rodar monitor
+        env:
+          IG_USERNAME: ${{ secrets.IG_USERNAME }}
+          IG_PASSWORD: ${{ secrets.IG_PASSWORD }}
         run: python main.py
