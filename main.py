@@ -1,19 +1,31 @@
+import os
+import time
 import instaloader
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 from config import CLIENTES
-import time
 
 # ============================================
-# CONFIGURAÇÃO INSTAGRAM
+# INSTAGRAM LOGIN (via GitHub Secrets)
 # ============================================
 
-# Coloque aqui SEU usuário do Instagram (sem @)
-IG_USERNAME = "accountverificarseguidor"
+IG_USERNAME = os.getenv("IG_USERNAME")
+IG_PASSWORD = os.getenv("IG_PASSWORD")
+
+print("Fazendo login no Instagram...")
+
+L = instaloader.Instaloader()
+
+try:
+    L.login(IG_USERNAME, IG_PASSWORD)
+    print("✅ Login feito com sucesso")
+except Exception as e:
+    print("❌ Erro no login:", e)
+    exit()
 
 # ============================================
-# CONECTAR AO GOOGLE SHEETS
+# GOOGLE SHEETS
 # ============================================
 
 scope = [
@@ -29,7 +41,6 @@ creds = ServiceAccountCredentials.from_json_keyfile_name(
 client = gspread.authorize(creds)
 sheet = client.open("Instagram Monitor").sheet1
 
-# Criar cabeçalho se estiver vazio
 if sheet.cell(1, 1).value is None:
     sheet.append_row([
         "Data",
@@ -37,23 +48,6 @@ if sheet.cell(1, 1).value is None:
         "Seguidores",
         "Posts"
     ])
-
-# ============================================
-# CARREGAR SESSÃO DO INSTAGRAM
-# ============================================
-
-print("Carregando sessão do Instagram...")
-
-L = instaloader.Instaloader()
-
-try:
-    L.load_session_from_file(IG_USERNAME)
-    print("✅ Sessão carregada com sucesso")
-except Exception as e:
-    print("❌ Erro ao carregar sessão:", e)
-    print("Primeiro rode:")
-    print(f'python -m instaloader --login {IG_USERNAME}')
-    exit()
 
 # ============================================
 # COLETAR DADOS
@@ -82,7 +76,6 @@ for usuario in CLIENTES:
 
         print("✅ Salvo com sucesso")
 
-        # Espera para evitar bloqueio
         time.sleep(8)
 
     except Exception as e:
