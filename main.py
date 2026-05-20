@@ -70,21 +70,42 @@ if headers != ["Data", "Cliente", "Seguidores", "Posts"]:
 # ============================================
 
 def rotate_tor_circuit():
-    """Solicita novo circuito Tor via socket na porta de controle (auth nula)."""
+    """Solicita novo circuito Tor via socket (cookie auth ou null auth)."""
     if not USE_TOR:
         return
     try:
-        import socket
+        import socket, binascii
+
+        # Tenta ler o cookie de autenticação do Tor
+        cookie = b""
+        for cookie_path in [
+            "/run/tor/control.authcookie",
+            "/var/run/tor/control.authcookie",
+        ]:
+            try:
+                with open(cookie_path, "rb") as f:
+                    cookie = f.read()
+                break
+            except OSError:
+                pass
+
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.settimeout(10)
             s.connect(("127.0.0.1", 9051))
-            s.sendall(b'AUTHENTICATE ""\r\nSIGNAL NEWNYM\r\nQUIT\r\n')
+            if cookie:
+                # Cookie auth: envia os bytes do cookie em hexadecimal
+                auth_cmd = b"AUTHENTICATE " + binascii.hexlify(cookie) + b"\r\n"
+            else:
+                # Null auth (fallback quando cookie não está disponível)
+                auth_cmd = b'AUTHENTICATE ""\r\n'
+            s.sendall(auth_cmd + b"SIGNAL NEWNYM\r\nQUIT\r\n")
             resp = s.recv(256).decode("utf-8", errors="replace")
+
         if "250" in resp:
             print("🔄 Novo circuito Tor solicitado — aguardando 10s...")
             time.sleep(10)
         else:
-            raise Exception(f"Resposta inesperada: {resp!r}")
+            raise Exception(f"Resposta: {resp!r}")
     except Exception as e:
         print(f"⚠️  Rotação de circuito indisponível ({e}) — aguardando 20s...")
         time.sleep(20)
