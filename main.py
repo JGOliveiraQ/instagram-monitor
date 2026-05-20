@@ -1,3 +1,4 @@
+import sys
 import time
 import instaloader
 import gspread
@@ -23,31 +24,28 @@ try:
     print("✅ Sessão carregada com sucesso")
 except Exception as e:
     print("❌ Erro ao carregar sessão:", e)
-    exit()
+    sys.exit(1)
+
 # ============================================
 # GOOGLE SHEETS
 # ============================================
 
-scope = [
+SCOPE = [
     "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    "credentials.json",
-    scope
-)
+try:
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPE)
+    gs_client = gspread.authorize(creds)
+    sheet = gs_client.open("Instagram Monitor").sheet1
+except Exception as e:
+    print("❌ Erro ao conectar ao Google Sheets:", e)
+    sys.exit(1)
 
-client = gspread.authorize(creds)
-sheet = client.open("Instagram Monitor").sheet1
-
-if sheet.cell(1, 1).value is None:
-    sheet.append_row([
-        "Data",
-        "Cliente",
-        "Seguidores",
-        "Posts"
-    ])
+headers = sheet.row_values(1)
+if headers != ["Data", "Cliente", "Seguidores", "Posts"]:
+    sheet.insert_row(["Data", "Cliente", "Seguidores", "Posts"], 1)
 
 # ============================================
 # COLETAR DADOS
@@ -59,23 +57,15 @@ for usuario in CLIENTES:
     try:
         print(f"Buscando @{usuario}...")
 
-        profile = instaloader.Profile.from_username(
-            L.context,
-            usuario
-        )
+        profile = instaloader.Profile.from_username(L.context, usuario)
 
         seguidores = profile.followers
         posts = profile.mediacount
 
-        sheet.append_row([
-            hoje,
-            usuario,
-            seguidores,
-            posts
-        ])
+        sheet.append_row([hoje, usuario, seguidores, posts])
 
-        print("✅ Salvo com sucesso")
+        print(f"✅ @{usuario} — {seguidores:,} seguidores, {posts} posts")
         time.sleep(8)
 
     except Exception as e:
-        print(f"❌ Erro em {usuario}: {e}")
+        print(f"❌ Erro em @{usuario}: {e}")

@@ -1,3 +1,13 @@
 venv/
-credentials.json
+.venv/
+.venv-1/
 __pycache__/
+*.pyc
+
+# Credenciais sensíveis
+credentials.json
+.env
+*.env
+
+# Sessão do Instagram
+session-*
