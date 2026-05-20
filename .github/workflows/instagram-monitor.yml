@@ -26,7 +26,9 @@ jobs:
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
 
       - name: Restaurar sessão do Instagram
-        run: echo '${{ secrets.INSTAGRAM_SESSION }}' | base64 --decode > session-accountverificarseguidor
+        env:
+          INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
+        run: python -c "import base64,os; open('session-accountverificarseguidor','wb').write(base64.b64decode(os.environ['INSTAGRAM_SESSION']))"
 
       - name: Rodar monitor
         run: python main.py
