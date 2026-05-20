@@ -25,5 +25,8 @@ jobs:
         run: |
           echo '${{ secrets.GOOGLE_CREDENTIALS }}' > credentials.json
 
+      - name: Restaurar sessão do Instagram
+        run: echo '${{ secrets.INSTAGRAM_SESSION }}' | base64 --decode > session-accountverificarseguidor
+
       - name: Rodar monitor
         run: python main.py
