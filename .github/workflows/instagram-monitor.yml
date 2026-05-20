@@ -33,12 +33,12 @@ jobs:
       - name: Instalar e iniciar Tor
         run: |
           sudo apt-get install -y tor
-          printf '\nControlPort 9051\nCookieAuthentication 1\n' | sudo tee -a /etc/tor/torrc
-          sudo service tor start
-          sleep 15
-          sudo chmod 644 /run/tor/control.authcookie || sudo chmod 644 /var/run/tor/control.authcookie || true
+          printf '\nControlPort 9051\n' | sudo tee -a /etc/tor/torrc
+          sudo service tor restart
+          sleep 20
           echo "IP via Tor:"
           curl --silent --socks5-hostname 127.0.0.1:9050 https://api.ipify.org || echo "Tor ativo mas sem resposta do ipify"
+          ss -tlnp | grep 9051 && echo "ControlPort OK" || echo "AVISO: ControlPort 9051 nao esta ouvindo"
 
       - name: Rodar monitor
         env:

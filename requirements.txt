@@ -4,4 +4,3 @@ gspread
 oauth2client
 pandas
 PySocks
-stem

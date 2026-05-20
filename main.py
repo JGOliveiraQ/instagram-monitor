@@ -70,17 +70,21 @@ if headers != ["Data", "Cliente", "Seguidores", "Posts"]:
 # ============================================
 
 def rotate_tor_circuit():
-    """Solicita novo circuito Tor via porta de controle."""
+    """Solicita novo circuito Tor via socket na porta de controle (auth nula)."""
     if not USE_TOR:
         return
     try:
-        from stem import Signal
-        from stem.control import Controller
-        with Controller.from_port(port=9051) as ctrl:
-            ctrl.authenticate(cookie_path="/run/tor/control.authcookie")
-            ctrl.signal(Signal.NEWNYM)
-        print("🔄 Novo circuito Tor solicitado — aguardando 10s...")
-        time.sleep(10)
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(10)
+            s.connect(("127.0.0.1", 9051))
+            s.sendall(b'AUTHENTICATE ""\r\nSIGNAL NEWNYM\r\nQUIT\r\n')
+            resp = s.recv(256).decode("utf-8", errors="replace")
+        if "250" in resp:
+            print("🔄 Novo circuito Tor solicitado — aguardando 10s...")
+            time.sleep(10)
+        else:
+            raise Exception(f"Resposta inesperada: {resp!r}")
     except Exception as e:
         print(f"⚠️  Rotação de circuito indisponível ({e}) — aguardando 20s...")
         time.sleep(20)
