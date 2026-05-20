@@ -69,6 +69,23 @@ if headers != ["Data", "Cliente", "Seguidores", "Posts"]:
 # BUSCAR DADOS DO INSTAGRAM
 # ============================================
 
+def rotate_tor_circuit():
+    """Solicita novo circuito Tor via porta de controle."""
+    if not USE_TOR:
+        return
+    try:
+        from stem import Signal
+        from stem.control import Controller
+        with Controller.from_port(port=9051) as ctrl:
+            ctrl.authenticate(cookie_path="/run/tor/control.authcookie")
+            ctrl.signal(Signal.NEWNYM)
+        print("🔄 Novo circuito Tor solicitado — aguardando 10s...")
+        time.sleep(10)
+    except Exception as e:
+        print(f"⚠️  Rotação de circuito indisponível ({e}) — aguardando 20s...")
+        time.sleep(20)
+
+
 def build_session(cookies=None) -> requests.Session:
     """Cria sessão requests, com Tor e/ou cookies do Instagram."""
     s = requests.Session()
@@ -129,9 +146,8 @@ for usuario in CLIENTES:
         except requests.HTTPError as e:
             codigo = e.response.status_code
             if codigo in (429, 400, 403) and USE_TOR and tentativa < 3:
-                espera = tentativa * 30
-                print(f"   ⚠️  {codigo} — aguardando {espera}s para novo circuito Tor...")
-                time.sleep(espera)
+                print(f"   ⚠️  {codigo} — rotacionando circuito Tor...")
+                rotate_tor_circuit()
             else:
                 print(f"❌ Erro em @{usuario}: {e}")
                 break
@@ -140,4 +156,6 @@ for usuario in CLIENTES:
             break
 
     if sucesso:
-        time.sleep(10)   # pausa entre perfis
+        rotate_tor_circuit()  # novo IP antes do próximo perfil
+    else:
+        time.sleep(5)
