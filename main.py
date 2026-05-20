@@ -156,7 +156,7 @@ hoje = datetime.now().strftime("%d/%m/%Y")
 
 for usuario in CLIENTES:
     sucesso = False
-    for tentativa in range(1, 7):          # até 6 tentativas por conta
+    for tentativa in range(1, 21):         # até 20 tentativas por conta
         try:
             print(f"Buscando @{usuario}{'  (tentativa ' + str(tentativa) + ')' if tentativa > 1 else ''}...")
             dados     = get_profile_data(usuario, session_cookies)
@@ -170,7 +170,7 @@ for usuario in CLIENTES:
 
         except requests.HTTPError as e:
             codigo = e.response.status_code
-            if codigo in (429, 400, 403) and USE_TOR and tentativa < 6:
+            if codigo in (429, 400, 403) and USE_TOR and tentativa < 20:
                 print(f"   ⚠️  {codigo} — rotacionando circuito Tor...")
                 rotate_tor_circuit()
             else:
