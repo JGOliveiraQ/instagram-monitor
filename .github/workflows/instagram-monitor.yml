@@ -28,7 +28,7 @@ jobs:
       - name: Restaurar sessão do Instagram
         env:
           INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
-        run: python -c "import base64,os; open('session-accountverificarseguidor','wb').write(base64.b64decode(os.environ['INSTAGRAM_SESSION']))"
+        run: python -c "import base64,os; s=os.environ['INSTAGRAM_SESSION'].strip().replace('\n','').replace('\r',''); open('session-accountverificarseguidor','wb').write(base64.b64decode(s))"
 
       - name: Rodar monitor
         run: python main.py
