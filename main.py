@@ -102,8 +102,8 @@ def rotate_tor_circuit():
             resp = s.recv(256).decode("utf-8", errors="replace")
 
         if "250" in resp:
-            print("🔄 Novo circuito Tor solicitado — aguardando 10s...")
-            time.sleep(10)
+            print("🔄 Novo circuito Tor solicitado — aguardando 15s...")
+            time.sleep(15)
         else:
             raise Exception(f"Resposta: {resp!r}")
     except Exception as e:
@@ -156,7 +156,7 @@ hoje = datetime.now().strftime("%d/%m/%Y")
 
 for usuario in CLIENTES:
     sucesso = False
-    for tentativa in range(1, 4):          # até 3 tentativas por conta
+    for tentativa in range(1, 7):          # até 6 tentativas por conta
         try:
             print(f"Buscando @{usuario}{'  (tentativa ' + str(tentativa) + ')' if tentativa > 1 else ''}...")
             dados     = get_profile_data(usuario, session_cookies)
@@ -170,7 +170,7 @@ for usuario in CLIENTES:
 
         except requests.HTTPError as e:
             codigo = e.response.status_code
-            if codigo in (429, 400, 403) and USE_TOR and tentativa < 3:
+            if codigo in (429, 400, 403) and USE_TOR and tentativa < 6:
                 print(f"   ⚠️  {codigo} — rotacionando circuito Tor...")
                 rotate_tor_circuit()
             else:
