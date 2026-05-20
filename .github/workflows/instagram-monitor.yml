@@ -30,5 +30,15 @@ jobs:
           INSTAGRAM_SESSION: ${{ secrets.INSTAGRAM_SESSION }}
         run: python -c "import base64,os; s=os.environ['INSTAGRAM_SESSION'].strip().replace('\n','').replace('\r',''); open('session-accountverificarseguidor','wb').write(base64.b64decode(s))"
 
+      - name: Instalar e iniciar Tor
+        run: |
+          sudo apt-get install -y tor
+          sudo service tor start
+          sleep 15
+          echo "IP via Tor:"
+          curl --silent --socks5-hostname 127.0.0.1:9050 https://api.ipify.org || echo "Tor ativo mas sem resposta do ipify"
+
       - name: Rodar monitor
+        env:
+          USE_TOR: "true"
         run: python main.py

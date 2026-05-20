@@ -3,3 +3,4 @@ instaloader
 gspread
 oauth2client
 pandas
+PySocks
