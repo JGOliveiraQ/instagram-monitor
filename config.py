@@ -8,4 +8,5 @@ CLIENTES = [
     "prealldesigncimenticio",
     "dr.diegomartins",
     "drgilgalvao",
+    "drigorpedrinha",
 ]
