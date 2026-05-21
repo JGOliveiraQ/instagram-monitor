@@ -44,7 +44,7 @@ SCOPE = [
 
 
 def _send_reset_email(to_email: str, display: str, reset_link: str):
-    mail_user = os.getenv("MAIL_USER", "suportegcbs@gmail.com")
+    mail_user = os.getenv("MAIL_USER", "redefinirsenha.gcbs@gmail.com")
     mail_pass = os.getenv("MAIL_PASS", "")
     if not mail_pass:
         raise RuntimeError("Variável MAIL_PASS não configurada no servidor.")
