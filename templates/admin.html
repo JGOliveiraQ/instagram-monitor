@@ -36,7 +36,8 @@
       padding: 0 24px; z-index: 100;
     }
     .nav-left { display: flex; align-items: center; gap: 12px; }
-    .nav-logo img { height: 32px; width: auto; display: block; }
+    .nav-logo img { height: 32px; width: auto; display: block; transition: filter 0.3s ease; }
+    [data-theme="light"] .nav-logo img { filter: invert(1); }
     .admin-badge {
       font-size: 10px; font-weight: 600; letter-spacing: 0.6px;
       text-transform: uppercase;

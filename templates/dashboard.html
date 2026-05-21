@@ -36,7 +36,8 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 0 24px; z-index: 100;
     }
-    .nav-logo img { height: 32px; width: auto; display: block; }
+    .nav-logo img { height: 32px; width: auto; display: block; transition: filter 0.3s ease; }
+    [data-theme="light"] .nav-logo img { filter: invert(1); }
     .nav-right { display: flex; align-items: center; gap: 10px; }
     .user-chip {
       background: rgba(139,92,246,0.12);
