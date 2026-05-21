@@ -583,67 +583,108 @@
     loadData();
 
     function gerarAnalise(d) {
-      const wf  = Number(d.weekly_followers.growth);
-      const mf  = Number(d.monthly_followers.growth);
-      const wp  = Number(d.weekly_posts.growth);
-      const pct = Number(d.weekly_followers.pct);
-      const tips = [];
+      const wf     = Number(d.weekly_followers.growth);
+      const mf     = Number(d.monthly_followers.growth);
+      const wp     = Number(d.weekly_posts.growth);
+      const mp     = Number(d.monthly_posts.growth);
+      const pctW   = Number(d.weekly_followers.pct);
+      const pctM   = Number(d.monthly_followers.pct);
+      const cur    = Number(d.current_followers);
+      const prevWf = Number(d.weekly_followers.prev_growth);
+      const cards  = [];
 
-      // — Posts desta semana —
-      if (wp === 0) {
-        tips.push({ icon: '📸', color: 'var(--red)',
-          title: 'Semana sem publicações',
-          text:  'Você não publicou nada esta semana. Perfis que postam 3–5×/semana crescem em média 2× mais rápido — planeje já o próximo conteúdo.' });
-      } else if (wp <= 2) {
-        tips.push({ icon: '📅', color: '#f59e0b',
-          title: 'Frequência pode aumentar',
-          text:  `${wp} post${wp>1?'s':''} esta semana. Tente chegar a 3–5 publicações para maximizar o alcance orgânico e aparecer mais no feed dos seguidores.` });
-      } else if (wp >= 6) {
-        tips.push({ icon: '⚡', color: 'var(--p1)',
-          title: 'Muitas publicações na semana',
-          text:  `${wp} posts em 7 dias pode saturar o público. Prefira menos posts com mais qualidade — o algoritmo valoriza engajamento por publicação.` });
+      // ── 1. Diagnóstico Geral ──────────────────────────────────
+      let dColor, dIcon, dTitle, dText;
+      if (mf > 0 && pctM >= 3) {
+        dColor = '#059669'; dIcon = '✅'; dTitle = 'Crescimento Forte';
+        dText = `Seu perfil cresceu +${pctM}% no último mês — acima da média para perfis do seu segmento. O conteúdo está convertendo bem: continue explorando os formatos que mais performam.`;
+      } else if (mf > 0) {
+        dColor = '#8b5cf6'; dIcon = '📈'; dTitle = 'Crescimento Estável';
+        dText = `Crescimento positivo de +${pctM}% no mês. Perfil em evolução constante — a consistência de publicações é o principal motor desse resultado.`;
+      } else if (mf === 0) {
+        dColor = '#f59e0b'; dIcon = '⚠️'; dTitle = 'Crescimento Estagnado';
+        dText = `Sem crescimento líquido no último mês. O perfil está atraindo novos seguidores, mas perdendo na mesma proporção — reveja a qualidade e o horário das publicações.`;
       } else {
-        tips.push({ icon: '✅', color: 'var(--green)',
-          title: 'Ótima frequência de posts',
-          text:  `${wp} posts esta semana — consistência perfeita! Manter esse ritmo é o principal fator de crescimento orgânico no Instagram.` });
+        dColor = '#dc2626'; dIcon = '🔴'; dTitle = 'Perfil em Queda';
+        dText = `Queda de ${Math.abs(pctM)}% no mês. O conteúdo atual pode não estar alinhado com as expectativas do público — reveja o que funcionou nos meses anteriores.`;
+      }
+      cards.push({ icon: dIcon, color: dColor, title: dTitle, text: dText });
+
+      // ── 2. Eficiência dos Posts ───────────────────────────────
+      if (wp > 0) {
+        const eff = wf / wp;
+        let eColor, eText;
+        if (eff >= 10) {
+          eColor = '#059669';
+          eText = `Cada post trouxe em média ${eff.toFixed(1)} novos seguidores esta semana — excelente conversão! Seu conteúdo está atraindo e convencendo pessoas a seguir o perfil.`;
+        } else if (eff >= 3) {
+          eColor = '#8b5cf6';
+          eText = `${eff.toFixed(1)} seguidores por post esta semana. Resultado razoável — Reels e carrosséis costumam dobrar esse número por terem maior distribuição orgânica.`;
+        } else if (eff > 0) {
+          eColor = '#f59e0b';
+          eText = `Apenas ${eff.toFixed(1)} seguidores por post. Pode indicar falta de chamada para ação (CTA). Tente encerrar cada post com uma pergunta direta ao público para estimular o engajamento.`;
+        } else {
+          eColor = '#dc2626';
+          eText = `Os posts desta semana não geraram seguidores líquidos. Analise o estilo e formato dos posts com melhor histórico e replique essa abordagem.`;
+        }
+        cards.push({ icon: '⚙️', color: eColor, title: 'Eficiência de Conteúdo', text: eText });
+      } else {
+        cards.push({ icon: '📸', color: '#dc2626', title: 'Nenhuma Publicação Esta Semana',
+          text: 'Perfis inativos por +7 dias perdem visibilidade progressivamente no algoritmo. Uma publicação de qualidade já é suficiente para reativar o alcance orgânico.' });
       }
 
-      // — Crescimento semanal de seguidores —
-      if (wf < 0) {
-        tips.push({ icon: '⚠️', color: 'var(--red)',
-          title: 'Queda de seguidores detectada',
-          text:  `Você perdeu ${Math.abs(wf)} seguidor${Math.abs(wf)>1?'es':''} esta semana. Analise os últimos posts — conteúdo fora do perfil do seu público costuma gerar unfollows.` });
-      } else if (wf === 0) {
-        tips.push({ icon: '📊', color: '#f59e0b',
-          title: 'Crescimento travado',
-          text:  'Nenhum seguidor novo esta semana. Reels têm 3× mais alcance que posts estáticos — considere criar um vídeo curto e dinâmico.' });
-      } else if (pct >= 3) {
-        tips.push({ icon: '🚀', color: 'var(--green)',
-          title: 'Crescimento acelerado!',
-          text:  `+${pct}% de seguidores em 7 dias é bem acima da média. Identifique quais posts geraram esse resultado e replique o formato.` });
+      // ── 3. Comparativo Semanal ────────────────────────────────
+      const diff = wf - prevWf;
+      let cColor, cIcon, cText;
+      if (diff > 5) {
+        cColor = '#059669'; cIcon = '🚀';
+        cText = `+${diff} seguidores a mais que na semana anterior — crescimento acelerando. Esse é o momento de manter a frequência e o estilo atual para sustentar o momentum.`;
+      } else if (diff > 0) {
+        cColor = '#8b5cf6'; cIcon = '📊';
+        cText = `Crescimento levemente maior que na semana passada. Tendência positiva — pequenas melhorias consistentes constroem resultados expressivos no longo prazo.`;
+      } else if (diff === 0) {
+        cColor = '#64748b'; cIcon = '➡️';
+        cText = `Resultado igual à semana anterior. Estabilidade indica consistência, mas experimente um formato diferente esta semana para destravar um novo patamar de crescimento.`;
       } else {
-        tips.push({ icon: '📈', color: 'var(--green)',
-          title: 'Crescimento saudável',
-          text:  `+${wf} seguidor${wf>1?'es':''} esta semana. Continue postando com consistência — pequenos ganhos diários constroem bases sólidas.` });
+        cColor = '#f59e0b'; cIcon = '📉';
+        cText = `Crescimento ${Math.abs(diff)} menor que na semana passada. Reveja os posts recentes — mudanças de estilo, horário ou frequência costumam explicar a desaceleração.`;
+      }
+      cards.push({ icon: cIcon, color: cColor, title: 'Comparativo com Semana Anterior', text: cText });
+
+      // ── 4. Projeção de Crescimento ────────────────────────────
+      if (mf > 0) {
+        const dailyRate = mf / 30;
+        const step = cur < 1000 ? 100 : cur < 10000 ? 1000 : cur < 100000 ? 10000 : 100000;
+        const nextMilestone = (Math.floor(cur / step) + 1) * step;
+        const needed = nextMilestone - cur;
+        const daysNeeded = Math.ceil(needed / dailyRate);
+        const label = daysNeeded <= 30 ? daysNeeded + ' dias' : (daysNeeded / 30).toFixed(1) + ' meses';
+        cards.push({ icon: '🎯', color: '#6366f1', title: 'Projeção de Crescimento',
+          text: `No ritmo atual (+${mf} seguidores/mês), você atingirá ${nextMilestone.toLocaleString('pt-BR')} seguidores em aproximadamente ${label}. Manter a consistência de posts é o principal fator para cumprir essa projeção.` });
+      } else if (mf < 0) {
+        cards.push({ icon: '🎯', color: '#dc2626', title: 'Projeção de Crescimento',
+          text: `Com a queda atual de ${Math.abs(mf)} seguidores/mês, é importante agir rápido. Reverter esse cenário exige mudança no estilo ou frequência de conteúdo nas próximas 2 semanas.` });
       }
 
-      // — Dica estratégica —
-      if (mf < 0) {
-        tips.push({ icon: '💡', color: 'var(--p1)',
-          title: 'Dica para reverter a queda',
-          text:  'Considere impulsionar um post com bom desempenho orgânico. Mesmo um investimento pequeno em tráfego pago pode reativar o alcance e atrair novos seguidores.' });
-      } else if (wp >= 3 && wf > 0) {
-        tips.push({ icon: '💡', color: 'var(--p1)',
-          title: 'Potencialize com carrosséis',
-          text:  'Carrosséis têm até 3× mais salvamentos que posts simples e o algoritmo distribui muito mais — experimente transformar seu próximo conteúdo nesse formato.' });
+      // ── 5. Recomendação Principal ─────────────────────────────
+      let rText;
+      const avgPostsWeek = mp / 4.3;
+      if (wf < 0 && mf < 0) {
+        rText = 'Foco imediato: revise os últimos 10 posts e compare o engajamento. Posts com desempenho muito abaixo da média prejudicam a distribuição de todos os próximos — considere arquivá-los.';
+      } else if (wp === 0) {
+        rText = 'Publique hoje. Mesmo um Story simples mantém o perfil ativo. Para o feed, Reels de 15–30s são o formato com maior alcance orgânico no Instagram atualmente.';
+      } else if (avgPostsWeek < 2) {
+        rText = `Média de ${avgPostsWeek.toFixed(1)} posts/semana está abaixo do ideal. Um calendário editorial com 3 temas fixos por semana resolve a inconsistência e melhora a previsibilidade do crescimento.`;
+      } else if (pctM >= 5) {
+        rText = 'Perfil em alta — explore colaborações com criadores do mesmo nicho. Uma troca de menções ou collab pode expor o perfil a milhares de seguidores qualificados de uma só vez.';
       } else {
-        tips.push({ icon: '💡', color: 'var(--p1)',
-          title: 'Engaje quem já te segue',
-          text:  'Responda comentários nas primeiras 2h após postar. Esse sinal de engajamento faz o algoritmo ampliar o alcance orgânico da publicação significativamente.' });
+        rText = 'Reels de 15–30 segundos recebem prioridade máxima no algoritmo. Converter os melhores posts estáticos em Reels rápidos é a forma mais eficiente de ampliar o alcance sem esforço extra.';
       }
+      cards.push({ icon: '💡', color: '#8b5cf6', title: 'Recomendação Principal', text: rText });
 
+      // ── Render ────────────────────────────────────────────────
       const grid = document.getElementById('analise-grid');
-      grid.innerHTML = tips.map(t =>
+      grid.innerHTML = cards.map(t =>
         `<div class="analise-card">
           <div class="analise-icon">${t.icon}</div>
           <div>
