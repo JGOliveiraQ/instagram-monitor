@@ -7,6 +7,7 @@
   <script>(function(){var t=localStorage.getItem('gcbs-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -212,6 +213,18 @@
     [data-theme="light"] .theme-toggle:hover { background: rgba(0,0,0,0.09); color: #0f172a; }
     [data-theme="light"] .section-label { color: #94a3b8; }
 
+    .btn-pdf {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);
+      color: #a78bfa; font-size: 12px; font-weight: 500;
+      padding: 6px 13px; border-radius: 8px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-pdf:hover { background: rgba(139,92,246,0.16); color: #c4b5fd; }
+    [data-theme="light"] .btn-pdf { background: rgba(139,92,246,0.07); border-color: rgba(139,92,246,0.2); color: #7c3aed; }
+    [data-theme="light"] .btn-pdf:hover { background: rgba(139,92,246,0.14); }
+
     .wa-btn {
       position: fixed; bottom: 24px; right: 24px; z-index: 999;
       width: 54px; height: 54px; border-radius: 50%;
@@ -287,7 +300,13 @@
     <div class="detail-panel" id="detail-panel">
       <div class="detail-header">
         <h2 id="detail-title">Selecione um cliente acima</h2>
-        <span class="range-badge" id="range-badge">—</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="range-badge" id="range-badge">—</span>
+          <button class="btn-pdf" id="btn-pdf-detail" onclick="gerarPDF()" style="display:none">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Gerar PDF
+          </button>
+        </div>
       </div>
 
       <div class="sub-stats" id="sub-stats" style="display:none">
@@ -378,6 +397,8 @@
     const CLIENTS = {{ clients | tojson }};
     let chartInst = null;
     const cache = {};
+    let currentClientId = null;
+    let currentClientDisplay = null;
 
     function fmt(n) {
       n = Number(n);
@@ -445,6 +466,9 @@
     async function selectClient(id, display) {
       document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
       document.getElementById('card-' + id).classList.add('active');
+      currentClientId = id;
+      currentClientDisplay = display;
+      document.getElementById('btn-pdf-detail').style.display = 'none';
       document.getElementById('detail-title').textContent = display;
       document.getElementById('sub-stats').style.display = 'none';
       document.getElementById('chart-wrap').innerHTML =
@@ -516,11 +540,81 @@
           }
         });
 
+        document.getElementById('btn-pdf-detail').style.display = 'flex';
+
       } catch (err) {
         document.getElementById('chart-wrap').innerHTML =
           `<div class="empty-state"><div class="empty-icon">⚠️</div>
            <h3>Erro ao carregar dados</h3><p>${err.message}</p></div>`;
       }
+    }
+
+    function gerarPDF() {
+      if (!currentClientId || !cache[currentClientId]) return;
+      const d = cache[currentClientId];
+      const display = currentClientDisplay;
+      const dates = d.dates || [];
+      const range = dates.length ? (dates[0] === dates[dates.length-1] ? dates[0] : dates[0] + ' → ' + dates[dates.length-1]) : '—';
+      const chartImg = chartInst ? chartInst.toBase64Image() : null;
+      const today = new Date().toLocaleDateString('pt-BR');
+
+      function pf(n) { n=Number(n); if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K'; return n.toLocaleString('pt-BR'); }
+      function ps(n) { n=Number(n); return (n>=0?'+':'')+pf(n); }
+      function pc(n) { return Number(n)>=0?'#059669':'#dc2626'; }
+
+      const rows = [
+        ['Seguidores atuais',   pf(d.current_followers),                                             '#1e293b'],
+        ['Crescimento semanal', ps(d.weekly_followers.growth)+' ('+d.weekly_followers.pct+'%)',      pc(d.weekly_followers.growth)],
+        ['Crescimento mensal',  ps(d.monthly_followers.growth)+' ('+d.monthly_followers.pct+'%)',    pc(d.monthly_followers.growth)],
+        ['Crescimento total',   ps(d.growth_absolute),                                               pc(d.growth_absolute)],
+        ['Posts totais',        pf(d.current_posts),                                                 '#1e293b'],
+        ['Posts esta semana',   ps(d.weekly_posts.growth),                                           pc(d.weekly_posts.growth)],
+        ['Posts este mês',      ps(d.monthly_posts.growth),                                          pc(d.monthly_posts.growth)],
+      ];
+
+      const cardsHtml = rows.map(([label, val, color]) =>
+        `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 14px;flex:1;min-width:140px;box-sizing:border-box">
+          <div style="font-size:9px;color:#6d28d9;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-weight:600">${label}</div>
+          <div style="font-size:17px;font-weight:700;color:${color};letter-spacing:-0.3px">${val}</div>
+        </div>`
+      ).join('');
+
+      const html = `
+        <div style="font-family:Arial,sans-serif;background:#ffffff;padding:32px;width:680px;box-sizing:border-box">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #8b5cf6;margin-bottom:22px">
+            <div>
+              <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">GCBS Monitor</div>
+              <div style="font-size:21px;font-weight:700;color:#0f172a">${display}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:3px">Relatório de seguidores no Instagram</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:9px;color:#94a3b8;margin-bottom:1px">GERADO EM</div>
+              <div style="font-size:12px;font-weight:600;color:#475569">${today}</div>
+              <div style="font-size:9px;color:#94a3b8;margin-top:7px;margin-bottom:1px">PERÍODO</div>
+              <div style="font-size:12px;font-weight:600;color:#475569">${range}</div>
+            </div>
+          </div>
+          <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Métricas</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px">${cardsHtml}</div>
+          ${chartImg ? `
+          <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Histórico de seguidores</div>
+          <img src="${chartImg}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0" />` : ''}
+          <div style="margin-top:22px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center">
+            GCBS Monitor · Relatório gerado em ${today}
+          </div>
+        </div>`;
+
+      const el = document.createElement('div');
+      el.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff';
+      el.innerHTML = html;
+      document.body.appendChild(el);
+      html2pdf().set({
+        margin: 0,
+        filename: 'GCBS_' + display.replace(/[^a-zA-Z0-9]/g,'_') + '_' + today.replace(/\//g,'-') + '.pdf',
+        image: { type: 'jpeg', quality: 0.97 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(el).save().then(() => document.body.removeChild(el));
     }
   </script>
 </body>
