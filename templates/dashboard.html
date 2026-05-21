@@ -153,6 +153,15 @@
       .sc-value { font-size: 22px; }
     }
 
+    /* ── Wipe animation ── */
+    .theme-wipe {
+      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      transform: translateY(-100%);
+      transition: transform 0.38s cubic-bezier(0.4,0,0.2,1);
+    }
+    .theme-wipe.wipe-in  { transform: translateY(0); }
+    .theme-wipe.wipe-out { transform: translateY(100%); transition: transform 0.38s cubic-bezier(0.4,0,0.2,1); }
+
     /* ── Theme toggle ── */
     .theme-toggle {
       background: rgba(255,255,255,0.04);
@@ -356,9 +365,25 @@
     function toggleTheme() {
       const html = document.documentElement;
       const next = html.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-      html.setAttribute('data-theme', next);
-      localStorage.setItem('gcbs-theme', next);
-      updateThemeBtn(next);
+      const wipe = document.createElement('div');
+      wipe.className = 'theme-wipe';
+      wipe.style.background = next === 'light'
+        ? 'linear-gradient(to bottom, #ffffff, #eef0f6)'
+        : 'linear-gradient(to bottom, #0a0a0a, #111111)';
+      document.body.appendChild(wipe);
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        wipe.classList.add('wipe-in');
+        setTimeout(() => {
+          html.setAttribute('data-theme', next);
+          localStorage.setItem('gcbs-theme', next);
+          updateThemeBtn(next);
+        }, 220);
+        setTimeout(() => {
+          wipe.classList.remove('wipe-in');
+          wipe.classList.add('wipe-out');
+          setTimeout(() => wipe.remove(), 400);
+        }, 380);
+      }));
     }
     function updateThemeBtn(theme) {
       const btn = document.getElementById('theme-btn');
