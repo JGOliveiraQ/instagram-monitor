@@ -1,9 +1,7 @@
 import os
 import secrets
-import smtplib
+import requests as http_requests
 from datetime import datetime, timedelta
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from functools import wraps
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
@@ -45,14 +43,9 @@ SCOPE = [
 
 
 def _send_reset_email(to_email: str, display: str, reset_link: str):
-    mail_user = os.getenv("MAIL_USER", "redefinirsenha.gcbs@gmail.com")
-    mail_pass = os.getenv("MAIL_PASS", "")
-    if not mail_pass:
-        raise RuntimeError("Variável MAIL_PASS não configurada no servidor.")
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "Redefinição de senha — GCBS Monitor"
-    msg["From"]    = f"GCBS Monitor <{mail_user}>"
-    msg["To"]      = to_email
+    api_key = os.getenv("RESEND_API_KEY", "")
+    if not api_key:
+        raise RuntimeError("Variável RESEND_API_KEY não configurada no servidor.")
     body = (
         f"Olá, {display}!\n\n"
         "Você solicitou a redefinição de senha na plataforma GCBS Instagram Monitor.\n\n"
@@ -60,10 +53,19 @@ def _send_reset_email(to_email: str, display: str, reset_link: str):
         "O link expira em 1 hora.\n\n"
         "Se você não solicitou isso, ignore este e-mail.\n\n— GCBS Monitor"
     )
-    msg.attach(MIMEText(body, "plain", "utf-8"))
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as srv:
-        srv.login(mail_user, mail_pass)
-        srv.sendmail(mail_user, to_email, msg.as_string())
+    resp = http_requests.post(
+        "https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={
+            "from":    "GCBS Monitor <onboarding@resend.dev>",
+            "to":      [to_email],
+            "subject": "Redefinição de senha — GCBS Monitor",
+            "text":    body,
+        },
+        timeout=10,
+    )
+    if resp.status_code not in (200, 201):
+        raise RuntimeError(f"Resend retornou {resp.status_code}: {resp.text}")
 
 
 def get_sheet():
