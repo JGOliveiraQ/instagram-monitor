@@ -43,9 +43,9 @@ SCOPE = [
 
 
 def _send_reset_email(to_email: str, display: str, reset_link: str):
-    api_key = os.getenv("RESEND_API_KEY", "")
+    api_key = os.getenv("BREVO_API_KEY", "")
     if not api_key:
-        raise RuntimeError("Variável RESEND_API_KEY não configurada no servidor.")
+        raise RuntimeError("Variável BREVO_API_KEY não configurada no servidor.")
     body = (
         f"Olá, {display}!\n\n"
         "Você solicitou a redefinição de senha na plataforma GCBS Instagram Monitor.\n\n"
@@ -54,18 +54,18 @@ def _send_reset_email(to_email: str, display: str, reset_link: str):
         "Se você não solicitou isso, ignore este e-mail.\n\n— GCBS Monitor"
     )
     resp = http_requests.post(
-        "https://api.resend.com/emails",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": api_key, "Content-Type": "application/json"},
         json={
-            "from":    "GCBS Monitor <onboarding@resend.dev>",
-            "to":      [to_email],
-            "subject": "Redefinição de senha — GCBS Monitor",
-            "text":    body,
+            "sender":      {"name": "GCBS Monitor", "email": "redefinirsenha.gcbs@gmail.com"},
+            "to":          [{"email": to_email}],
+            "subject":     "Redefinição de senha — GCBS Monitor",
+            "textContent": body,
         },
         timeout=10,
     )
     if resp.status_code not in (200, 201):
-        raise RuntimeError(f"Resend retornou {resp.status_code}: {resp.text}")
+        raise RuntimeError(f"Brevo retornou {resp.status_code}: {resp.text}")
 
 
 def get_sheet():
