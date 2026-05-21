@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GCBS — Cadastrar e-mail</title>
+  <script>(function(){var t=localStorage.getItem('gcbs-theme')||'dark';document.documentElement.setAttribute('data-theme',t);})();</script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0a0a0a; --card: #111111; --border: rgba(255,255,255,0.08);
+      --p1: #8b5cf6; --p2: #6366f1; --text: #f1f5f9; --muted: #94a3b8;
+    }
+    body {
+      font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    }
+    .bg-blob { position: fixed; border-radius: 50%; filter: blur(90px); pointer-events: none; z-index: 0; animation: drift 14s ease-in-out infinite alternate; }
+    .b1 { width: 520px; height: 520px; background: rgba(139,92,246,0.1); top: -180px; left: -120px; }
+    .b2 { width: 420px; height: 420px; background: rgba(99,102,241,0.07); bottom: -120px; right: -100px; animation-delay: -6s; }
+    @keyframes drift { from { transform: translate(0,0) scale(1); } to { transform: translate(30px,25px) scale(1.05); } }
+    .wrapper { position: relative; z-index: 1; width: 100%; max-width: 420px; padding: 20px; }
+    .brand { text-align: center; margin-bottom: 30px; }
+    .brand img { height: 52px; width: auto; display: block; margin: 0 auto 10px; transition: filter 0.3s ease; }
+    .brand p { font-size: 12px; color: var(--muted); letter-spacing: 0.8px; text-transform: uppercase; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px;
+      padding: 34px 30px; box-shadow: 0 32px 64px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    .card h2 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    .card .sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+    .alert {
+      border-radius: 10px; padding: 11px 14px; font-size: 13px; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .alert-ok  { background: rgba(16,185,129,0.1);  border: 1px solid rgba(16,185,129,0.3);  color: #6ee7b7; }
+    .alert-err { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.35);  color: #fca5a5; }
+    .field { margin-bottom: 15px; }
+    .field label { display: block; font-size: 11px; font-weight: 500; color: var(--muted); margin-bottom: 7px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .field input {
+      width: 100%; padding: 13px 15px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 11px;
+      color: var(--text); font-size: 15px; font-family: 'Inter', sans-serif;
+      outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .field input:focus { border-color: var(--p1); box-shadow: 0 0 0 3px rgba(139,92,246,0.18); }
+    .field input::placeholder { color: rgba(148,163,184,0.35); }
+    .btn {
+      width: 100%; margin-top: 8px; padding: 13px;
+      background: linear-gradient(135deg, var(--p1), var(--p2));
+      border: none; border-radius: 11px; color: #fff;
+      font-size: 15px; font-weight: 600; font-family: 'Inter', sans-serif;
+      cursor: pointer; box-shadow: 0 4px 20px rgba(139,92,246,0.3);
+      transition: opacity 0.2s, transform 0.12s;
+    }
+    .btn:hover { opacity: 0.88; }
+    .btn:active { transform: scale(0.985); }
+    .back-link { display: block; text-align: center; margin-top: 18px; font-size: 13px; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+    .back-link:hover { color: var(--p1); }
+    .success-box { text-align: center; padding: 10px 0 6px; }
+    .success-box .icon { font-size: 48px; margin-bottom: 14px; }
+    .success-box h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .success-box p { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 24px; }
+    .btn-outline {
+      display: block; width: 100%; padding: 13px; text-align: center;
+      background: transparent; border: 1px solid rgba(139,92,246,0.4);
+      border-radius: 11px; color: var(--p1); font-size: 15px; font-weight: 600;
+      font-family: 'Inter', sans-serif; text-decoration: none;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .btn-outline:hover { background: rgba(139,92,246,0.08); border-color: var(--p1); }
+
+    /* ── Light theme ── */
+    [data-theme="light"] { --bg: #eef0f6; --card: #ffffff; --border: rgba(0,0,0,0.08); --text: #0f172a; --muted: #64748b; }
+    [data-theme="light"] body { background: var(--bg); color: var(--text); }
+    [data-theme="light"] .b1 { background: rgba(139,92,246,0.13); }
+    [data-theme="light"] .b2 { background: rgba(99,102,241,0.09); }
+    [data-theme="light"] .card { background: #ffffff; border-color: rgba(0,0,0,0.07); box-shadow: 0 20px 60px rgba(0,0,0,0.09); }
+    [data-theme="light"] .card h2 { color: #0f172a; }
+    [data-theme="light"] .card .sub { color: #64748b; }
+    [data-theme="light"] .field label { color: #64748b; }
+    [data-theme="light"] .field input { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.1); color: #0f172a; }
+    [data-theme="light"] .back-link { color: #94a3b8; }
+    [data-theme="light"] .brand p { color: #94a3b8; }
+    [data-theme="light"] .brand img { filter: invert(1); }
+  </style>
+</head>
+<body>
+  <div class="bg-blob b1"></div>
+  <div class="bg-blob b2"></div>
+  <div class="wrapper">
+    <div class="brand">
+      <img src="/static/logo.png" alt="GCBS" />
+      <p>Instagram Monitor</p>
+    </div>
+    <div class="card">
+
+      {% if msg %}
+      <div class="success-box">
+        <div class="icon">✅</div>
+        <h3>E-mail cadastrado!</h3>
+        <p>Seu e-mail foi vinculado à sua conta com sucesso.<br>Agora você pode usar "Esqueci minha senha" normalmente.</p>
+        <a href="/login" class="btn-outline">← Voltar ao login</a>
+      </div>
+
+      {% else %}
+      <h2>Cadastrar e-mail</h2>
+      <p class="sub">Vincule um e-mail à sua conta para poder recuperar sua senha</p>
+
+      {% if error %}
+      <div class="alert alert-err">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#fca5a5" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="POST">
+        <div class="field">
+          <label for="u">Usuário</label>
+          <input id="u" type="text" name="username" placeholder="Digite seu usuário" required autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="p">Senha atual</label>
+          <input id="p" type="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <div class="field">
+          <label for="e">Novo e-mail</label>
+          <input id="e" type="email" name="email" placeholder="seuemail@exemplo.com" required autocomplete="email" />
+        </div>
+        <button type="submit" class="btn">Salvar e-mail</button>
+      </form>
+      {% endif %}
+
+    </div>
+    {% if not msg %}
+    <a href="/login" class="back-link">← Voltar ao login</a>
+    {% endif %}
+  </div>
+</body>
+</html>

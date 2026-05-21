@@ -1,4 +1,5 @@
 import os
+import json
 import secrets
 import requests as http_requests
 from datetime import datetime, timedelta
@@ -9,6 +10,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+USER_DATA_FILE = os.path.join(BASE_DIR, "user_data.json")
 
 app = Flask(__name__)
 app.secret_key = "gcbs_insta_monitor_s3cr3t_2024"
@@ -35,6 +37,42 @@ USERS = {
 
 # tokens de redefinição de senha: {token: {"username": str, "expires": datetime}}
 RESET_TOKENS: dict = {}
+
+
+# ── Persistência de senhas e e-mails ────────────────────────────────────────
+
+def load_user_data():
+    """Aplica senhas e e-mails salvos em disco sobre o dict USERS."""
+    if not os.path.exists(USER_DATA_FILE):
+        return
+    try:
+        with open(USER_DATA_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        for uname, fields in data.items():
+            if uname in USERS:
+                if "password" in fields:
+                    USERS[uname]["password"] = fields["password"]
+                if "email" in fields:
+                    USERS[uname]["email"] = fields["email"]
+    except Exception as e:
+        print(f"Aviso: não foi possível carregar user_data.json: {e}")
+
+
+def save_user_data(username: str, field: str, value: str):
+    """Salva alteração de senha ou e-mail no arquivo persistente em disco."""
+    data = {}
+    if os.path.exists(USER_DATA_FILE):
+        try:
+            with open(USER_DATA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except Exception:
+            pass
+    data.setdefault(username, {})[field] = value
+    with open(USER_DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+load_user_data()  # aplica ao iniciar o servidor
 
 SCOPE = [
     "https://spreadsheets.google.com/feeds",
@@ -338,9 +376,31 @@ def reset_password(token):
             error = "As senhas não coincidem."
         else:
             USERS[data["username"]]["password"] = pw
+            save_user_data(data["username"], "password", pw)
             del RESET_TOKENS[token]
             return render_template("reset_password.html", success=True)
     return render_template("reset_password.html", token=token, error=error)
+
+
+@app.route("/register-email", methods=["GET", "POST"])
+def register_email():
+    if "user" in session:
+        return redirect(url_for("index"))
+    msg = error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+        password = request.form.get("password", "")
+        email    = request.form.get("email", "").strip()
+        user = USERS.get(username)
+        if not user or user.get("is_admin") or user["password"] != password:
+            error = "Usuário ou senha incorretos."
+        elif not email or "@" not in email or "." not in email:
+            error = "Digite um e-mail válido."
+        else:
+            USERS[username]["email"] = email
+            save_user_data(username, "email", email)
+            msg = True
+    return render_template("register_email.html", msg=msg, error=error)
 
 
 if __name__ == "__main__":
