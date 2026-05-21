@@ -4,4 +4,5 @@ CLIENTES = [
     "openai",
     "ddtizapragas",
     "previctchurras",
+    "viadasfloresbh",
 ]
