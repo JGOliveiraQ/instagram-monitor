@@ -1,5 +1,6 @@
 CLIENTES = [
     "instagram",
     "nike",
-    "openai"
+    "openai",
+    "ddtizapragas",
 ]

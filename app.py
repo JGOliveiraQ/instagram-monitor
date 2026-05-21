@@ -19,6 +19,7 @@ USERS = {
     "instagram": {"password": "12345",      "display": "Instagram", "email": ""},
     "nike":      {"password": "12345",      "display": "Nike",      "email": ""},
     "openai":    {"password": "12345",      "display": "OpenAI",    "email": ""},
+    "ddtiza689": {"password": "1527034814", "display": "DDTiza",    "email": "ddtiza.praga@terra.com.br"},
     "admin":     {"password": "admin12345", "display": "Admin",     "email": "suportegcbs@gmail.com", "is_admin": True},
 }
 
