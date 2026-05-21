@@ -31,6 +31,7 @@ USERS = {
     "drairacemafonseca":{"password": "8429768667", "display": "Dra. Iracema Fonseca","email": "",                              "instagram": "iracemafonsecadra"},
     "fvascular":        {"password": "4700459790", "display": "FVascular",          "email": "",                               "instagram": "mannarinomatheus"},
     "fginecologia":     {"password": "9205105363", "display": "FGinecologia",       "email": "",                               "instagram": "dr.marciolamblet"},
+    "joaoteste":        {"password": "8397123992", "display": "João Teste",          "email": "jgoliveiraqm@gmail.com",         "instagram": "jgoliveiraq"},
     "admin":            {"password": "admin12345", "display": "Admin",              "email": "suportegcbs@gmail.com",          "is_admin": True},
 }
 
