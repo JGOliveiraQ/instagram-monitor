@@ -16,22 +16,22 @@ app = Flask(__name__)
 app.secret_key = "gcbs_insta_monitor_s3cr3t_2024"
 
 USERS = {
-    "ddtiza":    {"password": "1527034814", "display": "DDTiza",    "email": "ddtiza.praga@terra.com.br"},
-    "previct":      {"password": "5762384988", "display": "Previct",        "email": "previct@previct.com.br"},
-    "viadasflores": {"password": "3787202186", "display": "Via das Flores", "email": "glaubergustavobh@gmail.com"},
-    "preall":       {"password": "2740280667", "display": "Preall",         "email": "rogerio@preall.com.br"},
-    "drdiego":      {"password": "8536332321", "display": "Dr. Diego",      "email": "diegomedufrj@hotmail.com"},
-    "drgilgalvao":  {"password": "4815602081", "display": "Dr. Gil Galvão",   "email": "gilggbs@gmail.com"},
-    "drigorpedrinha":   {"password": "6271456446", "display": "Dr. Igor Pedrinha",   "email": "igorsmpedrinha@yahoo.com.br"},
-    "drothaviolopes":   {"password": "1570474158", "display": "Dr. Othavio Lopes",    "email": "othavio.lopes@gmail.com"},
-    "drraphaelfonseca": {"password": "4391284491", "display": "Dr. Raphael Fonseca", "email": "raphael_s_f@hotmail.com"},
-    "drpedrofrade":     {"password": "2512135217", "display": "Dr. Pedro Frade",     "email": "drpedrofrade@gmail.com"},
-    "drwagnervieira":   {"password": "3316708980", "display": "Dr. Wagner Vieira",   "email": "wagnervieirabh@gmail.com"},
-    "drjacques":          {"password": "2034907622", "display": "Dr. Jacques",           "email": ""},
-    "drairacemafonseca": {"password": "8429768667", "display": "Dra. Iracema Fonseca", "email": ""},
-    "fvascular":         {"password": "4700459790", "display": "FVascular",    "email": ""},
-    "fginecologia":      {"password": "9205105363", "display": "FGinecologia", "email": ""},
-    "admin":     {"password": "admin12345", "display": "Admin",     "email": "suportegcbs@gmail.com", "is_admin": True},
+    "ddtiza":           {"password": "1527034814", "display": "DDTiza",             "email": "ddtiza.praga@terra.com.br",      "instagram": "ddtizapragas"},
+    "previct":          {"password": "5762384988", "display": "Previct",            "email": "previct@previct.com.br",         "instagram": "previctchurras"},
+    "viadasflores":     {"password": "3787202186", "display": "Via das Flores",     "email": "glaubergustavobh@gmail.com",     "instagram": "viadasfloresbh"},
+    "preall":           {"password": "2740280667", "display": "Preall",             "email": "rogerio@preall.com.br",          "instagram": "prealldesigncimenticio"},
+    "drdiego":          {"password": "8536332321", "display": "Dr. Diego",          "email": "diegomedufrj@hotmail.com",       "instagram": "dr.diegomartins"},
+    "drgilgalvao":      {"password": "4815602081", "display": "Dr. Gil Galvão",     "email": "gilggbs@gmail.com",              "instagram": "drgilgalvao"},
+    "drigorpedrinha":   {"password": "6271456446", "display": "Dr. Igor Pedrinha",  "email": "igorsmpedrinha@yahoo.com.br",    "instagram": "drigorpedrinha"},
+    "drothaviolopes":   {"password": "1570474158", "display": "Dr. Othavio Lopes",  "email": "othavio.lopes@gmail.com",        "instagram": "dr.othaviolopes"},
+    "drraphaelfonseca": {"password": "4391284491", "display": "Dr. Raphael Fonseca","email": "raphael_s_f@hotmail.com",        "instagram": "raphu_fonseca"},
+    "drpedrofrade":     {"password": "2512135217", "display": "Dr. Pedro Frade",    "email": "drpedrofrade@gmail.com",         "instagram": "dr.pedrofradeurologista"},
+    "drwagnervieira":   {"password": "3316708980", "display": "Dr. Wagner Vieira",  "email": "wagnervieirabh@gmail.com",       "instagram": "drwagnervieira"},
+    "drjacques":        {"password": "2034907622", "display": "Dr. Jacques",        "email": "",                               "instagram": "drjacqueshouly"},
+    "drairacemafonseca":{"password": "8429768667", "display": "Dra. Iracema Fonseca","email": "",                              "instagram": "iracemafonsecadra"},
+    "fvascular":        {"password": "4700459790", "display": "FVascular",          "email": "",                               "instagram": "mannarinomatheus"},
+    "fginecologia":     {"password": "9205105363", "display": "FGinecologia",       "email": "",                               "instagram": "dr.marciolamblet"},
+    "admin":            {"password": "admin12345", "display": "Admin",              "email": "suportegcbs@gmail.com",          "is_admin": True},
 }
 
 # tokens de redefinição de senha: {token: {"username": str, "expires": datetime}}
@@ -269,7 +269,9 @@ def get_stats(username):
         return jsonify({"error": "Acesso negado"}), 403
     try:
         records = get_cached_records()
-        return jsonify(_build_stats(username, records))
+        # Usa o @ do Instagram real do usuário para buscar no Sheets
+        insta = USERS.get(username, {}).get("instagram", username)
+        return jsonify(_build_stats(insta, records))
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -284,7 +286,8 @@ def get_all_stats():
         for uid, udata in USERS.items():
             if udata.get("is_admin"):
                 continue
-            result[uid] = _build_stats(uid, records)
+            insta = udata.get("instagram", uid)
+            result[uid] = _build_stats(insta, records)
         return jsonify(result)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
