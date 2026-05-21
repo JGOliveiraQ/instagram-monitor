@@ -15,4 +15,5 @@ CLIENTES = [
     "drwagnervieira",
     "drjacqueshouly",
     "iracemafonsecadra",
+    "mannarinomatheus",
 ]
