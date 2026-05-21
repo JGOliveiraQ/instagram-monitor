@@ -16,7 +16,7 @@ app = Flask(__name__)
 app.secret_key = "gcbs_insta_monitor_s3cr3t_2024"
 
 USERS = {
-    "ddtiza":           {"password": "1527034814", "display": "DDTiza",             "email": "ddtiza.praga@terra.com.br",      "instagram": "ddtizapragas"},
+    "ddtiza":           {"password": "1527034814", "display": "DDtiza",             "email": "ddtiza.praga@terra.com.br",      "instagram": "ddtizapragas"},
     "previct":          {"password": "5762384988", "display": "Previct",            "email": "previct@previct.com.br",         "instagram": "previctchurras"},
     "viadasflores":     {"password": "3787202186", "display": "Via das Flores",     "email": "glaubergustavobh@gmail.com",     "instagram": "viadasfloresbh"},
     "preall":           {"password": "2740280667", "display": "Preall",             "email": "rogerio@preall.com.br",          "instagram": "prealldesigncimenticio"},
