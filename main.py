@@ -154,7 +154,20 @@ def get_profile_data(username: str, cookies=None) -> dict:
 
 hoje = datetime.now().strftime("%d/%m/%Y")
 
+# Carrega registros existentes para evitar duplicatas no mesmo dia
+print("Verificando registros existentes...")
+registros_existentes = set()
+try:
+    for row in sheet.get_all_records():
+        registros_existentes.add((str(row.get("Data", "")), str(row.get("Cliente", ""))))
+except Exception as e:
+    print(f"⚠️  Não foi possível verificar duplicatas: {e}")
+
 for usuario in CLIENTES:
+    if (hoje, usuario) in registros_existentes:
+        print(f"⏭️  @{usuario} — já registrado hoje, pulando...")
+        continue
+
     sucesso = False
     for tentativa in range(1, 21):         # até 20 tentativas por conta
         try:
@@ -164,6 +177,7 @@ for usuario in CLIENTES:
             posts      = dados["posts"]
 
             sheet.append_row([hoje, usuario, seguidores, posts])
+            registros_existentes.add((hoje, usuario))  # evita dup se loop reiniciar
             print(f"✅ @{usuario} — {seguidores:,} seguidores, {posts} posts")
             sucesso = True
             break
