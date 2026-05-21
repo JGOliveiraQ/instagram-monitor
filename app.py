@@ -80,6 +80,62 @@ def get_sheet():
     return gc.open("Instagram Monitor").sheet1
 
 
+# Cache de registros da planilha (evita múltiplas conexões simultâneas)
+_records_cache: dict = {"data": None, "ts": None}
+_CACHE_TTL = timedelta(minutes=5)
+
+
+def get_cached_records():
+    """Retorna todos os registros da planilha, usando cache de 5 min."""
+    now = datetime.now()
+    if _records_cache["data"] is not None and _records_cache["ts"] and \
+            (now - _records_cache["ts"]) < _CACHE_TTL:
+        return _records_cache["data"]
+    records = get_sheet().get_all_records()
+    _records_cache["data"] = records
+    _records_cache["ts"] = now
+    return records
+
+
+def _build_stats(username, records):
+    """Monta o dict de stats para um username a partir dos records já carregados."""
+    rows = [
+        r for r in records
+        if str(r.get("Cliente", "")).strip().lower() == username.lower()
+    ]
+    if not rows:
+        return {"has_data": False}
+
+    dates     = [str(r.get("Data", ""))      for r in rows]
+    followers = [int(r.get("Seguidores", 0)) for r in rows]
+    posts     = [int(r.get("Posts", 0))      for r in rows]
+
+    first       = followers[0]
+    current_val = followers[-1]
+    growth_abs  = current_val - first
+    growth_pct  = round(growth_abs / first * 100, 2) if first else 0.0
+
+    weekly_f  = _period_growth(dates, followers, 7)
+    monthly_f = _period_growth(dates, followers, 30)
+    weekly_p  = _period_growth(dates, posts, 7)
+    monthly_p = _period_growth(dates, posts, 30)
+
+    return {
+        "has_data":          True,
+        "dates":             dates,
+        "followers":         followers,
+        "posts":             posts,
+        "current_followers": current_val,
+        "growth_absolute":   growth_abs,
+        "growth_pct":        growth_pct,
+        "current_posts":     posts[-1] if posts else 0,
+        "weekly_followers":  weekly_f,
+        "monthly_followers": monthly_f,
+        "weekly_posts":      weekly_p,
+        "monthly_posts":     monthly_p,
+    }
+
+
 def _period_growth(dates, values, days):
     """
     Growth over the last `days` days compared to the previous `days` days.
@@ -211,47 +267,25 @@ def get_stats(username):
     current_user = session["user"]
     if not USERS.get(current_user, {}).get("is_admin") and current_user != username:
         return jsonify({"error": "Acesso negado"}), 403
-
     try:
-        sheet   = get_sheet()
-        records = sheet.get_all_records()
-        rows    = [
-            r for r in records
-            if str(r.get("Cliente", "")).strip().lower() == username.lower()
-        ]
+        records = get_cached_records()
+        return jsonify(_build_stats(username, records))
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
 
-        if not rows:
-            return jsonify({"has_data": False})
 
-        dates     = [str(r.get("Data", ""))      for r in rows]
-        followers = [int(r.get("Seguidores", 0)) for r in rows]
-        posts     = [int(r.get("Posts", 0))      for r in rows]
-
-        first       = followers[0]
-        current_val = followers[-1]
-        growth_abs  = current_val - first
-        growth_pct  = round(growth_abs / first * 100, 2) if first else 0.0
-
-        weekly_f  = _period_growth(dates, followers, 7)
-        monthly_f = _period_growth(dates, followers, 30)
-        weekly_p  = _period_growth(dates, posts, 7)
-        monthly_p = _period_growth(dates, posts, 30)
-
-        return jsonify({
-            "has_data":          True,
-            "dates":             dates,
-            "followers":         followers,
-            "posts":             posts,
-            "current_followers": current_val,
-            "growth_absolute":   growth_abs,
-            "growth_pct":        growth_pct,
-            "current_posts":     posts[-1] if posts else 0,
-            "weekly_followers":  weekly_f,
-            "monthly_followers": monthly_f,
-            "weekly_posts":      weekly_p,
-            "monthly_posts":     monthly_p,
-        })
-
+@app.route("/api/all_stats")
+@admin_required
+def get_all_stats():
+    """Retorna stats de todos os clientes em uma única chamada ao Sheets."""
+    try:
+        records = get_cached_records()
+        result = {}
+        for uid, udata in USERS.items():
+            if udata.get("is_admin"):
+                continue
+            result[uid] = _build_stats(uid, records)
+        return jsonify(result)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 

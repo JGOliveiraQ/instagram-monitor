@@ -321,21 +321,31 @@
       return d;
     }
 
-    // Pre-load summary cards
-    CLIENTS.forEach(async c => {
+    // Pre-load summary cards — UMA única chamada ao servidor
+    (async () => {
       try {
-        const d = await fetchStats(c.id);
-        const cfEl = document.getElementById('cf-' + c.id);
-        const dotEl = document.getElementById('dot-' + c.id);
-        const cgEl = document.getElementById('cg-' + c.id);
-        if (!d.has_data) { cfEl.textContent = '—'; dotEl.classList.add('ok'); return; }
-        cfEl.textContent = fmt(d.current_followers);
-        dotEl.classList.add('ok');
-        const abs = d.monthly_followers.growth;
-        cgEl.textContent = fmtSigned(abs) + ' este mês';
-        cgEl.className = 'cc-growth ' + (abs >= 0 ? 'pos' : 'neg');
+        const res = await fetch('/api/all_stats');
+        const all = await res.json();
+        // Popula cache com todos os dados de uma vez
+        Object.assign(cache, all);
+        // Atualiza os cards
+        CLIENTS.forEach(c => {
+          const d = all[c.id];
+          if (!d) return;
+          const cfEl = document.getElementById('cf-' + c.id);
+          const dotEl = document.getElementById('dot-' + c.id);
+          const cgEl  = document.getElementById('cg-' + c.id);
+          if (!d.has_data) { if (cfEl) cfEl.textContent = '—'; if (dotEl) dotEl.classList.add('ok'); return; }
+          if (cfEl) cfEl.textContent = fmt(d.current_followers);
+          if (dotEl) dotEl.classList.add('ok');
+          const abs = d.monthly_followers.growth;
+          if (cgEl) {
+            cgEl.textContent = fmtSigned(abs) + ' este mês';
+            cgEl.className = 'cc-growth ' + (abs >= 0 ? 'pos' : 'neg');
+          }
+        });
       } catch { /* silent */ }
-    });
+    })();
 
     async function selectClient(id, display) {
       document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
