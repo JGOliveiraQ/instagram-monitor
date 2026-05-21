@@ -25,9 +25,16 @@ SCOPE = [
 
 
 def get_sheet():
-    creds = ServiceAccountCredentials.from_json_keyfile_name(
-        os.path.join(BASE_DIR, "credentials.json"), SCOPE
-    )
+    creds_json = os.getenv("GOOGLE_CREDENTIALS")
+    if creds_json:
+        import json
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(
+            json.loads(creds_json), SCOPE
+        )
+    else:
+        creds = ServiceAccountCredentials.from_json_keyfile_name(
+            os.path.join(BASE_DIR, "credentials.json"), SCOPE
+        )
     gc = gspread.authorize(creds)
     return gc.open("Instagram Monitor").sheet1
 
@@ -209,4 +216,5 @@ def get_stats(username):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
