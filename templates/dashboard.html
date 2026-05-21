@@ -59,17 +59,29 @@
     }
     .btn-logout:hover { background: rgba(255,255,255,0.08); color: var(--text); }
 
-    .btn-pdf {
-      display: flex; align-items: center; gap: 5px;
-      background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);
-      color: #a78bfa; font-size: 12px; font-weight: 500;
-      padding: 6px 13px; border-radius: 8px;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: background 0.2s, color 0.2s;
+    .btn-download-pdf {
+      display: inline-flex; align-items: center; gap: 9px;
+      background: linear-gradient(135deg, var(--p1), var(--p2));
+      border: none; border-radius: 12px; color: #fff;
+      font-size: 14px; font-weight: 600; font-family: 'Inter', sans-serif;
+      padding: 13px 28px; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(139,92,246,0.35);
+      transition: opacity 0.2s, transform 0.12s;
     }
-    .btn-pdf:hover { background: rgba(139,92,246,0.16); color: #c4b5fd; }
-    [data-theme="light"] .btn-pdf { background: rgba(139,92,246,0.07); border-color: rgba(139,92,246,0.2); color: #7c3aed; }
-    [data-theme="light"] .btn-pdf:hover { background: rgba(139,92,246,0.14); }
+    .btn-download-pdf:hover { opacity: 0.88; }
+    .btn-download-pdf:active { transform: scale(0.985); }
+
+    /* ── Análise de Engajamento ── */
+    .analise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .analise-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 18px;
+      display: flex; gap: 14px; align-items: flex-start;
+    }
+    .analise-icon { font-size: 22px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+    .analise-title { font-size: 13px; font-weight: 600; margin-bottom: 5px; }
+    .analise-text { font-size: 12px; color: var(--muted); line-height: 1.55; }
+    [data-theme="light"] .analise-card { box-shadow: 0 1px 3px rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.07); }
 
     /* ── Main ── */
     main { padding: calc(var(--nav-h) + 32px) 24px 48px; max-width: 1080px; margin: 0 auto; }
@@ -263,10 +275,6 @@
     </a>
     <div class="nav-right">
       <span class="user-chip">{{ display }}</span>
-      <button class="btn-pdf" id="btn-pdf" onclick="gerarPDF()" style="display:none">
-        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        PDF
-      </button>
       <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" aria-label="Alternar tema"></button>
       <a href="/logout" class="btn-logout">
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -281,6 +289,12 @@
     <div class="page-header">
       <h1>Olá, {{ display }} 👋</h1>
       <p>Acompanhe o crescimento dos seus seguidores no Instagram</p>
+    </div>
+
+    <div id="analise-wrap" style="display:none;margin-bottom:28px">
+      <div class="section-label" style="margin-top:0;margin-bottom:6px">Análise de Engajamento</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">Sugestões personalizadas com base no seu histórico de crescimento</p>
+      <div id="analise-grid" class="analise-grid"></div>
     </div>
 
     <!-- Seguidores -->
@@ -369,6 +383,13 @@
       <div class="chart-wrap" id="chart-wrap">
         <div class="loading"><div class="spinner"></div><p>Buscando dados…</p></div>
       </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;padding-bottom:8px">
+      <button class="btn-download-pdf" id="btn-pdf" onclick="gerarPDF()" style="display:none">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar Relatório em PDF
+      </button>
     </div>
   </main>
 
@@ -550,7 +571,8 @@
         });
 
         _pdfData = data;
-        document.getElementById('btn-pdf').style.display = 'flex';
+        document.getElementById('btn-pdf').style.display = 'inline-flex';
+        gerarAnalise(data);
 
       } catch (err) {
         document.getElementById('chart-wrap').innerHTML =
@@ -561,6 +583,79 @@
     }
 
     loadData();
+
+    function gerarAnalise(d) {
+      const wf  = Number(d.weekly_followers.growth);
+      const mf  = Number(d.monthly_followers.growth);
+      const wp  = Number(d.weekly_posts.growth);
+      const pct = Number(d.weekly_followers.pct);
+      const tips = [];
+
+      // — Posts desta semana —
+      if (wp === 0) {
+        tips.push({ icon: '📸', color: 'var(--red)',
+          title: 'Semana sem publicações',
+          text:  'Você não publicou nada esta semana. Perfis que postam 3–5×/semana crescem em média 2× mais rápido — planeje já o próximo conteúdo.' });
+      } else if (wp <= 2) {
+        tips.push({ icon: '📅', color: '#f59e0b',
+          title: 'Frequência pode aumentar',
+          text:  `${wp} post${wp>1?'s':''} esta semana. Tente chegar a 3–5 publicações para maximizar o alcance orgânico e aparecer mais no feed dos seguidores.` });
+      } else if (wp >= 6) {
+        tips.push({ icon: '⚡', color: 'var(--p1)',
+          title: 'Muitas publicações na semana',
+          text:  `${wp} posts em 7 dias pode saturar o público. Prefira menos posts com mais qualidade — o algoritmo valoriza engajamento por publicação.` });
+      } else {
+        tips.push({ icon: '✅', color: 'var(--green)',
+          title: 'Ótima frequência de posts',
+          text:  `${wp} posts esta semana — consistência perfeita! Manter esse ritmo é o principal fator de crescimento orgânico no Instagram.` });
+      }
+
+      // — Crescimento semanal de seguidores —
+      if (wf < 0) {
+        tips.push({ icon: '⚠️', color: 'var(--red)',
+          title: 'Queda de seguidores detectada',
+          text:  `Você perdeu ${Math.abs(wf)} seguidor${Math.abs(wf)>1?'es':''} esta semana. Analise os últimos posts — conteúdo fora do perfil do seu público costuma gerar unfollows.` });
+      } else if (wf === 0) {
+        tips.push({ icon: '📊', color: '#f59e0b',
+          title: 'Crescimento travado',
+          text:  'Nenhum seguidor novo esta semana. Reels têm 3× mais alcance que posts estáticos — considere criar um vídeo curto e dinâmico.' });
+      } else if (pct >= 3) {
+        tips.push({ icon: '🚀', color: 'var(--green)',
+          title: 'Crescimento acelerado!',
+          text:  `+${pct}% de seguidores em 7 dias é bem acima da média. Identifique quais posts geraram esse resultado e replique o formato.` });
+      } else {
+        tips.push({ icon: '📈', color: 'var(--green)',
+          title: 'Crescimento saudável',
+          text:  `+${wf} seguidor${wf>1?'es':''} esta semana. Continue postando com consistência — pequenos ganhos diários constroem bases sólidas.` });
+      }
+
+      // — Dica estratégica —
+      if (mf < 0) {
+        tips.push({ icon: '💡', color: 'var(--p1)',
+          title: 'Dica para reverter a queda',
+          text:  'Considere impulsionar um post com bom desempenho orgânico. Mesmo um investimento pequeno em tráfego pago pode reativar o alcance e atrair novos seguidores.' });
+      } else if (wp >= 3 && wf > 0) {
+        tips.push({ icon: '💡', color: 'var(--p1)',
+          title: 'Potencialize com carrosséis',
+          text:  'Carrosséis têm até 3× mais salvamentos que posts simples e o algoritmo distribui muito mais — experimente transformar seu próximo conteúdo nesse formato.' });
+      } else {
+        tips.push({ icon: '💡', color: 'var(--p1)',
+          title: 'Engaje quem já te segue',
+          text:  'Responda comentários nas primeiras 2h após postar. Esse sinal de engajamento faz o algoritmo ampliar o alcance orgânico da publicação significativamente.' });
+      }
+
+      const grid = document.getElementById('analise-grid');
+      grid.innerHTML = tips.map(t =>
+        `<div class="analise-card">
+          <div class="analise-icon">${t.icon}</div>
+          <div>
+            <div class="analise-title" style="color:${t.color}">${t.title}</div>
+            <div class="analise-text">${t.text}</div>
+          </div>
+        </div>`
+      ).join('');
+      document.getElementById('analise-wrap').style.display = 'block';
+    }
 
     function gerarPDF() {
       if (!_pdfData) return;
