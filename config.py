@@ -16,4 +16,5 @@ CLIENTES = [
     "drjacqueshouly",
     "iracemafonsecadra",
     "mannarinomatheus",
+    "dr.marciolamblet",
 ]
