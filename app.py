@@ -1,5 +1,9 @@
 import os
+import secrets
+import smtplib
 from datetime import datetime, timedelta
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from functools import wraps
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
@@ -12,16 +16,41 @@ app = Flask(__name__)
 app.secret_key = "gcbs_insta_monitor_s3cr3t_2024"
 
 USERS = {
-    "instagram": {"password": "12345",      "display": "Instagram"},
-    "nike":      {"password": "12345",      "display": "Nike"},
-    "openai":    {"password": "12345",      "display": "OpenAI"},
-    "admin":     {"password": "admin12345", "display": "Admin", "is_admin": True},
+    "instagram": {"password": "12345",      "display": "Instagram", "email": ""},
+    "nike":      {"password": "12345",      "display": "Nike",      "email": ""},
+    "openai":    {"password": "12345",      "display": "OpenAI",    "email": ""},
+    "admin":     {"password": "admin12345", "display": "Admin",     "email": "suportegcbs@gmail.com", "is_admin": True},
 }
+
+# tokens de redefinição de senha: {token: {"username": str, "expires": datetime}}
+RESET_TOKENS: dict = {}
 
 SCOPE = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
 ]
+
+
+def _send_reset_email(to_email: str, display: str, reset_link: str):
+    mail_user = os.getenv("MAIL_USER", "suportegcbs@gmail.com")
+    mail_pass = os.getenv("MAIL_PASS", "")
+    if not mail_pass:
+        raise RuntimeError("Variável MAIL_PASS não configurada no servidor.")
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = "Redefinição de senha — GCBS Monitor"
+    msg["From"]    = f"GCBS Monitor <{mail_user}>"
+    msg["To"]      = to_email
+    body = (
+        f"Olá, {display}!\n\n"
+        "Você solicitou a redefinição de senha na plataforma GCBS Instagram Monitor.\n\n"
+        f"Clique no link abaixo para criar uma nova senha:\n{reset_link}\n\n"
+        "O link expira em 1 hora.\n\n"
+        "Se você não solicitou isso, ignore este e-mail.\n\n— GCBS Monitor"
+    )
+    msg.attach(MIMEText(body, "plain", "utf-8"))
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as srv:
+        srv.login(mail_user, mail_pass)
+        srv.sendmail(mail_user, to_email, msg.as_string())
 
 
 def get_sheet():
@@ -213,6 +242,53 @@ def get_stats(username):
 
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if "user" in session:
+        return redirect(url_for("index"))
+    msg = error = None
+    if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
+        user = USERS.get(username)
+        # Remove tokens expirados
+        now = datetime.now()
+        for t in list(RESET_TOKENS):
+            if now > RESET_TOKENS[t]["expires"]:
+                del RESET_TOKENS[t]
+        if user and user.get("email"):
+            token = secrets.token_urlsafe(32)
+            RESET_TOKENS[token] = {"username": username, "expires": now + timedelta(hours=1)}
+            link = url_for("reset_password", token=token, _external=True)
+            try:
+                _send_reset_email(user["email"], user["display"], link)
+                msg = f"Link enviado para {user['email']}. Verifique sua caixa de entrada."
+            except Exception as exc:
+                error = f"Erro ao enviar e-mail: {exc}"
+        else:
+            msg = "Se o usuário existir e tiver e-mail cadastrado, você receberá o link."
+    return render_template("forgot_password.html", msg=msg, error=error)
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    data = RESET_TOKENS.get(token)
+    if not data or datetime.now() > data["expires"]:
+        return render_template("reset_password.html", invalid=True)
+    error = None
+    if request.method == "POST":
+        pw  = request.form.get("password", "")
+        pw2 = request.form.get("confirm_password", "")
+        if len(pw) < 6:
+            error = "A senha deve ter pelo menos 6 caracteres."
+        elif pw != pw2:
+            error = "As senhas não coincidem."
+        else:
+            USERS[data["username"]]["password"] = pw
+            del RESET_TOKENS[token]
+            return render_template("reset_password.html", success=True)
+    return render_template("reset_password.html", token=token, error=error)
 
 
 if __name__ == "__main__":
