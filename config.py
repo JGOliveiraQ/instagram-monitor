@@ -5,4 +5,5 @@ CLIENTES = [
     "ddtizapragas",
     "previctchurras",
     "viadasfloresbh",
+    "prealldesigncimenticio",
 ]
