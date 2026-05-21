@@ -26,7 +26,8 @@ USERS = {
     "drdiego":      {"password": "8536332321", "display": "Dr. Diego",      "email": "diegomedufrj@hotmail.com"},
     "drgilgalvao":  {"password": "4815602081", "display": "Dr. Gil Galvão",   "email": "gilggbs@gmail.com"},
     "drigorpedrinha":   {"password": "6271456446", "display": "Dr. Igor Pedrinha",   "email": "igorsmpedrinha@yahoo.com.br"},
-    "drothaviolopes":   {"password": "1570474158", "display": "Dr. Othavio Lopes",   "email": "othavio.lopes@gmail.com"},
+    "drothaviolopes":   {"password": "1570474158", "display": "Dr. Othavio Lopes",    "email": "othavio.lopes@gmail.com"},
+    "drraphaelfonseca": {"password": "4391284491", "display": "Dr. Raphael Fonseca", "email": "raphael_s_f@hotmail.com"},
     "admin":     {"password": "admin12345", "display": "Admin",     "email": "suportegcbs@gmail.com", "is_admin": True},
 }
 
