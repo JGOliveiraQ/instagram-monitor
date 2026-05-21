@@ -604,17 +604,29 @@
           </div>
         </div>`;
 
+      const fname = 'GCBS_' + display.replace(/[^a-zA-Z0-9]/g,'_') + '_' + today.replace(/\//g,'-') + '.pdf';
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9998;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:#fff;font-family:Inter,sans-serif;font-size:13px;font-weight:500';
+      overlay.innerHTML = '<div style="width:26px;height:26px;border:2.5px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite"></div>Gerando PDF…';
+      document.body.appendChild(overlay);
+
       const el = document.createElement('div');
-      el.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff';
+      el.style.cssText = 'position:absolute;left:0;top:0;background:#ffffff;width:720px;z-index:-1;';
       el.innerHTML = html;
       document.body.appendChild(el);
+
+      const cleanup = () => {
+        if (document.body.contains(el)) document.body.removeChild(el);
+        if (document.body.contains(overlay)) document.body.removeChild(overlay);
+      };
       html2pdf().set({
         margin: 0,
-        filename: 'GCBS_' + display.replace(/[^a-zA-Z0-9]/g,'_') + '_' + today.replace(/\//g,'-') + '.pdf',
+        filename: fname,
         image: { type: 'jpeg', quality: 0.97 },
         html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(el).save().then(() => document.body.removeChild(el));
+      }).from(el).save().then(cleanup).catch(cleanup);
     }
   </script>
 </body>
