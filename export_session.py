@@ -3,8 +3,10 @@ Gera o base64 da sessão e salva em session_b64.txt
 Abra esse arquivo, selecione tudo e copie para o GitHub Secret.
 """
 import base64
+import os
+SESSION_FILE = "session-accountverificarseguidor" if os.path.exists("session-accountverificarseguidor") else "accountverificarseguidor"
 
-with open("session-accountverificarseguidor", "rb") as f:
+with open(SESSION_FILE, "rb") as f:
     data = f.read()
 
 b64 = base64.b64encode(data).decode("ascii")
