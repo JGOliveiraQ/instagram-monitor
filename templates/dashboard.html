@@ -372,6 +372,48 @@
       </div>
     </div>
 
+    <!-- Curtidas -->
+    <div class="section-label">Curtidas</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon ic-pink">❤️</div>
+        </div>
+        <div class="sc-value" id="v-likes">—</div>
+        <div class="sc-label">Curtidas recentes</div>
+        <div class="sc-sub" id="s-likes">últimas publicações</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon ic-orange">⭐</div>
+        </div>
+        <div class="sc-value" id="v-avg-likes">—</div>
+        <div class="sc-label">Média por post</div>
+        <div class="sc-sub">curtidas / post recente</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon ic-green">📊</div>
+          <span class="trend-pill trend-flat" id="trend-week-l">—</span>
+        </div>
+        <div class="sc-value" id="v-week-l">—</div>
+        <div class="sc-label">Variação semanal</div>
+        <div class="sc-sub" id="s-week-l">esta semana</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon ic-blue">📅</div>
+          <span class="trend-pill trend-flat" id="trend-month-l">—</span>
+        </div>
+        <div class="sc-value" id="v-month-l">—</div>
+        <div class="sc-label">Variação mensal</div>
+        <div class="sc-sub" id="s-month-l">este mês</div>
+      </div>
+    </div>
+
     <!-- Chart -->
     <div class="chart-card">
       <div class="chart-header">
@@ -520,6 +562,22 @@
         setVal('v-month-p', mp.growth, true, true);
         document.getElementById('s-month-p').textContent = mp.label;
         setTrend('trend-month-p', mp.trend, mp.prev_growth);
+
+        // Curtidas
+        setVal('v-likes', data.current_likes);
+        setVal('v-avg-likes', data.avg_likes);
+        document.getElementById('s-likes').textContent =
+          'curtidas nas últimas publicações';
+
+        const wl = data.weekly_likes;
+        setVal('v-week-l', wl.growth, true, true);
+        document.getElementById('s-week-l').textContent = wl.label;
+        setTrend('trend-week-l', wl.trend, wl.prev_growth);
+
+        const ml = data.monthly_likes;
+        setVal('v-month-l', ml.growth, true, true);
+        document.getElementById('s-month-l').textContent = ml.label;
+        setTrend('trend-month-l', ml.trend, ml.prev_growth);
 
         // Range badge
         const d = data.dates;

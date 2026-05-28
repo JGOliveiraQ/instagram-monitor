@@ -61,8 +61,16 @@ except Exception as e:
     sys.exit(1)
 
 headers = sheet.row_values(1)
-if headers != ["Data", "Cliente", "Seguidores", "Posts"]:
-    sheet.insert_row(["Data", "Cliente", "Seguidores", "Posts"], 1)
+expected = ["Data", "Cliente", "Seguidores", "Posts", "Curtidas"]
+if not headers:
+    sheet.insert_row(expected, 1)
+elif headers[:4] == ["Data", "Cliente", "Seguidores", "Posts"]:
+    # Planilha já existe — adiciona coluna Curtidas se faltar
+    if len(headers) < 5 or headers[4] != "Curtidas":
+        sheet.update_cell(1, 5, "Curtidas")
+        print("✅ Coluna 'Curtidas' adicionada ao cabeçalho")
+elif headers != expected:
+    sheet.insert_row(expected, 1)
 
 
 # ============================================
@@ -142,9 +150,17 @@ def get_profile_data(username: str, cookies=None) -> dict:
     resp = s.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
     user = resp.json()["data"]["user"]
+    # Curtidas: soma as curtidas dos posts recentes já retornados (sem req extra)
+    edges = user.get("edge_owner_to_timeline_media", {}).get("edges", [])
+    curtidas = sum(
+        e.get("node", {}).get("edge_liked_by", {}).get("count", 0)
+        for e in edges
+    )
     return {
         "followers": user["edge_followed_by"]["count"],
         "posts":     user["edge_owner_to_timeline_media"]["count"],
+        "curtidas":  curtidas,
+        "amostras":  len(edges),   # quantos posts foram amostrados
     }
 
 
@@ -172,13 +188,15 @@ for usuario in CLIENTES:
     for tentativa in range(1, 21):         # até 20 tentativas por conta
         try:
             print(f"Buscando @{usuario}{'  (tentativa ' + str(tentativa) + ')' if tentativa > 1 else ''}...")
-            dados     = get_profile_data(usuario, session_cookies)
+            dados      = get_profile_data(usuario, session_cookies)
             seguidores = dados["followers"]
             posts      = dados["posts"]
+            curtidas   = dados["curtidas"]
+            amostras   = dados["amostras"]
 
-            sheet.append_row([hoje, usuario, seguidores, posts])
+            sheet.append_row([hoje, usuario, seguidores, posts, curtidas])
             registros_existentes.add((hoje, usuario))  # evita dup se loop reiniciar
-            print(f"✅ @{usuario} — {seguidores:,} seguidores, {posts} posts")
+            print(f"✅ @{usuario} — {seguidores:,} seg | {posts} posts | {curtidas:,} curtidas ({amostras} amostras)")
             sucesso = True
             break
 

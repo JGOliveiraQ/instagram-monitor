@@ -429,6 +429,9 @@
       <div class="modal-section-label">Publicações</div>
       <div class="stats-grid" id="modal-grid-p"></div>
 
+      <div class="modal-section-label">Curtidas</div>
+      <div class="stats-grid" id="modal-grid-l"></div>
+
       <div class="chart-card">
         <div class="chart-header">
           <h2>Seguidores &amp; Publicações</h2>
@@ -552,6 +555,35 @@
         </div>`;
     }
 
+    function buildLikesCards(d) {
+      const wl = d.weekly_likes, ml = d.monthly_likes;
+      return `
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-pink">❤️</div></div>
+          <div class="sc-value">${fmt(d.current_likes)}</div>
+          <div class="sc-label">Curtidas recentes</div>
+          <div class="sc-sub">últimas publicações</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-orange">⭐</div></div>
+          <div class="sc-value">${fmt(d.avg_likes)}</div>
+          <div class="sc-label">Média por post</div>
+          <div class="sc-sub">curtidas / post recente</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-green">📊</div>${trendPill(wl.trend, wl.prev_growth)}</div>
+          <div class="sc-value ${Number(wl.growth)>=0?'pos':'neg'}">${fmtSigned(wl.growth)}</div>
+          <div class="sc-label">Variação semanal</div>
+          <div class="sc-sub">${wl.label}</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-blue">📅</div>${trendPill(ml.trend, ml.prev_growth)}</div>
+          <div class="sc-value ${Number(ml.growth)>=0?'pos':'neg'}">${fmtSigned(ml.growth)}</div>
+          <div class="sc-label">Variação mensal</div>
+          <div class="sc-sub">${ml.label}</div>
+        </div>`;
+    }
+
     function buildPostCards(d) {
       const wp = d.weekly_posts, mp = d.monthly_posts;
       return `
@@ -635,6 +667,7 @@
       document.getElementById('modal-btn-pdf').style.display = 'none';
       document.getElementById('modal-grid-f').innerHTML = loadingCards(4);
       document.getElementById('modal-grid-p').innerHTML = loadingCards(3);
+      document.getElementById('modal-grid-l').innerHTML = loadingCards(4);
       document.getElementById('modal-chart-wrap').innerHTML =
         '<div class="loading"><div class="spinner"></div><p>Carregando…</p></div>';
       document.getElementById('modal-analise-grid').innerHTML = '';
@@ -662,6 +695,7 @@
         // Stat cards
         document.getElementById('modal-grid-f').innerHTML = buildFollowerCards(d);
         document.getElementById('modal-grid-p').innerHTML = buildPostCards(d);
+        document.getElementById('modal-grid-l').innerHTML = buildLikesCards(d);
 
         // Dual-line chart
         document.getElementById('modal-chart-wrap').innerHTML = '<canvas id="modal-chart"></canvas>';
