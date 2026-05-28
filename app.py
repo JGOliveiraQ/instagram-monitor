@@ -147,10 +147,11 @@ def _build_stats(username, records):
     if not rows:
         return {"has_data": False}
 
-    dates     = [str(r.get("Data", ""))      for r in rows]
-    followers = [int(r.get("Seguidores", 0)) for r in rows]
-    posts     = [int(r.get("Posts", 0))      for r in rows]
-    curtidas  = [int(r.get("Curtidas", 0))   for r in rows]
+    dates       = [str(r.get("Data", ""))        for r in rows]
+    followers   = [int(r.get("Seguidores", 0))  for r in rows]
+    posts       = [int(r.get("Posts", 0))        for r in rows]
+    curtidas    = [int(r.get("Curtidas", 0))     for r in rows]
+    comentarios = [int(r.get("Comentarios", 0)) for r in rows]
 
     first       = followers[0]
     current_val = followers[-1]
@@ -161,33 +162,41 @@ def _build_stats(username, records):
     monthly_f = _calendar_period_growth(dates, followers, 'month')
     weekly_p  = _calendar_period_growth(dates, posts,     'week')
     monthly_p = _calendar_period_growth(dates, posts,     'month')
-    weekly_l  = _calendar_period_growth(dates, curtidas,  'week')
-    monthly_l = _calendar_period_growth(dates, curtidas,  'month')
+    weekly_l  = _calendar_period_growth(dates, curtidas,    'week')
+    monthly_l = _calendar_period_growth(dates, curtidas,    'month')
+    weekly_c  = _calendar_period_growth(dates, comentarios, 'week')
+    monthly_c = _calendar_period_growth(dates, comentarios, 'month')
 
-    cur_curtidas = curtidas[-1] if curtidas else 0
-    cur_posts    = posts[-1] if posts else 0
-    # Média de curtidas por post (últimas amostras — até 12 posts)
-    amostras_ref = min(12, cur_posts) if cur_posts else 1
-    avg_curtidas = round(cur_curtidas / amostras_ref, 1) if amostras_ref else 0
+    cur_curtidas    = curtidas[-1]    if curtidas    else 0
+    cur_comentarios = comentarios[-1] if comentarios else 0
+    cur_posts       = posts[-1]       if posts       else 0
+    amostras_ref    = min(12, cur_posts) if cur_posts else 1
+    avg_curtidas    = round(cur_curtidas    / amostras_ref, 1) if amostras_ref else 0
+    avg_comentarios = round(cur_comentarios / amostras_ref, 1) if amostras_ref else 0
 
     return {
-        "has_data":          True,
-        "dates":             dates,
-        "followers":         followers,
-        "posts":             posts,
-        "curtidas":          curtidas,
-        "current_followers": current_val,
-        "growth_absolute":   growth_abs,
-        "growth_pct":        growth_pct,
-        "current_posts":     cur_posts,
-        "current_likes":     cur_curtidas,
-        "avg_likes":         avg_curtidas,
-        "weekly_followers":  weekly_f,
-        "monthly_followers": monthly_f,
-        "weekly_posts":      weekly_p,
-        "monthly_posts":     monthly_p,
-        "weekly_likes":      weekly_l,
-        "monthly_likes":     monthly_l,
+        "has_data":           True,
+        "dates":              dates,
+        "followers":          followers,
+        "posts":              posts,
+        "curtidas":           curtidas,
+        "comentarios":        comentarios,
+        "current_followers":  current_val,
+        "growth_absolute":    growth_abs,
+        "growth_pct":         growth_pct,
+        "current_posts":      cur_posts,
+        "current_likes":      cur_curtidas,
+        "avg_likes":          avg_curtidas,
+        "current_comments":   cur_comentarios,
+        "avg_comments":       avg_comentarios,
+        "weekly_followers":   weekly_f,
+        "monthly_followers":  monthly_f,
+        "weekly_posts":       weekly_p,
+        "monthly_posts":      monthly_p,
+        "weekly_likes":       weekly_l,
+        "monthly_likes":      monthly_l,
+        "weekly_comments":    weekly_c,
+        "monthly_comments":   monthly_c,
     }
 
 

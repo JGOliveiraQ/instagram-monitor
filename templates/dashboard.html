@@ -372,25 +372,21 @@
       </div>
     </div>
 
-    <!-- Curtidas -->
-    <div class="section-label">Curtidas</div>
+    <!-- Curtidas & Comentários -->
+    <div class="section-label">Curtidas &amp; Comentários</div>
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="sc-top">
-          <div class="sc-icon ic-pink">❤️</div>
-        </div>
+        <div class="sc-top"><div class="sc-icon ic-pink">❤️</div></div>
         <div class="sc-value" id="v-likes">—</div>
         <div class="sc-label">Curtidas recentes</div>
-        <div class="sc-sub" id="s-likes">últimas publicações</div>
+        <div class="sc-sub">últimas publicações</div>
       </div>
 
       <div class="stat-card">
-        <div class="sc-top">
-          <div class="sc-icon ic-orange">⭐</div>
-        </div>
+        <div class="sc-top"><div class="sc-icon ic-orange">⭐</div></div>
         <div class="sc-value" id="v-avg-likes">—</div>
-        <div class="sc-label">Média por post</div>
-        <div class="sc-sub">curtidas / post recente</div>
+        <div class="sc-label">Média curtidas/post</div>
+        <div class="sc-sub">publicações recentes</div>
       </div>
 
       <div class="stat-card">
@@ -399,7 +395,7 @@
           <span class="trend-pill trend-flat" id="trend-week-l">—</span>
         </div>
         <div class="sc-value" id="v-week-l">—</div>
-        <div class="sc-label">Variação semanal</div>
+        <div class="sc-label">Curtidas — variação semanal</div>
         <div class="sc-sub" id="s-week-l">esta semana</div>
       </div>
 
@@ -409,8 +405,42 @@
           <span class="trend-pill trend-flat" id="trend-month-l">—</span>
         </div>
         <div class="sc-value" id="v-month-l">—</div>
-        <div class="sc-label">Variação mensal</div>
+        <div class="sc-label">Curtidas — variação mensal</div>
         <div class="sc-sub" id="s-month-l">este mês</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top"><div class="sc-icon ic-purple">💬</div></div>
+        <div class="sc-value" id="v-comments">—</div>
+        <div class="sc-label">Comentários recentes</div>
+        <div class="sc-sub">últimas publicações</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top"><div class="sc-icon ic-cyan">📝</div></div>
+        <div class="sc-value" id="v-avg-comments">—</div>
+        <div class="sc-label">Média comentários/post</div>
+        <div class="sc-sub">publicações recentes</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon ic-green">📊</div>
+          <span class="trend-pill trend-flat" id="trend-week-c">—</span>
+        </div>
+        <div class="sc-value" id="v-week-c">—</div>
+        <div class="sc-label">Comentários — variação semanal</div>
+        <div class="sc-sub" id="s-week-c">esta semana</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-icon ic-blue">📅</div>
+          <span class="trend-pill trend-flat" id="trend-month-c">—</span>
+        </div>
+        <div class="sc-value" id="v-month-c">—</div>
+        <div class="sc-label">Comentários — variação mensal</div>
+        <div class="sc-sub" id="s-month-c">este mês</div>
       </div>
     </div>
 
@@ -566,8 +596,6 @@
         // Curtidas
         setVal('v-likes', data.current_likes);
         setVal('v-avg-likes', data.avg_likes);
-        document.getElementById('s-likes').textContent =
-          'curtidas nas últimas publicações';
 
         const wl = data.weekly_likes;
         setVal('v-week-l', wl.growth, true, true);
@@ -578,6 +606,20 @@
         setVal('v-month-l', ml.growth, true, true);
         document.getElementById('s-month-l').textContent = ml.label;
         setTrend('trend-month-l', ml.trend, ml.prev_growth);
+
+        // Comentários
+        setVal('v-comments', data.current_comments);
+        setVal('v-avg-comments', data.avg_comments);
+
+        const wc = data.weekly_comments;
+        setVal('v-week-c', wc.growth, true, true);
+        document.getElementById('s-week-c').textContent = wc.label;
+        setTrend('trend-week-c', wc.trend, wc.prev_growth);
+
+        const mc = data.monthly_comments;
+        setVal('v-month-c', mc.growth, true, true);
+        document.getElementById('s-month-c').textContent = mc.label;
+        setTrend('trend-month-c', mc.trend, mc.prev_growth);
 
         // Range badge
         const d = data.dates;
