@@ -500,12 +500,12 @@
 
         const wf = data.weekly_followers;
         setVal('v-week-f', wf.growth, true, true);
-        document.getElementById('s-week-f').textContent = wf.pct + '% — últimos 7 dias';
+        document.getElementById('s-week-f').textContent = wf.pct + '% — ' + wf.label;
         setTrend('trend-week-f', wf.trend, wf.prev_growth);
 
         const mf = data.monthly_followers;
         setVal('v-month-f', mf.growth, true, true);
-        document.getElementById('s-month-f').textContent = mf.pct + '% — últimos 30 dias';
+        document.getElementById('s-month-f').textContent = mf.pct + '% — ' + mf.label;
         setTrend('trend-month-f', mf.trend, mf.prev_growth);
 
         // Publicações
@@ -513,12 +513,12 @@
 
         const wp = data.weekly_posts;
         setVal('v-week-p', wp.growth, true, true);
-        document.getElementById('s-week-p').textContent = 'novos posts em 7 dias';
+        document.getElementById('s-week-p').textContent = wp.label;
         setTrend('trend-week-p', wp.trend, wp.prev_growth);
 
         const mp = data.monthly_posts;
         setVal('v-month-p', mp.growth, true, true);
-        document.getElementById('s-month-p').textContent = 'novos posts em 30 dias';
+        document.getElementById('s-month-p').textContent = mp.label;
         setTrend('trend-month-p', mp.trend, mp.prev_growth);
 
         // Range badge

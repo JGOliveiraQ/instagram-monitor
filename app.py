@@ -156,10 +156,10 @@ def _build_stats(username, records):
     growth_abs  = current_val - first
     growth_pct  = round(growth_abs / first * 100, 2) if first else 0.0
 
-    weekly_f  = _period_growth(dates, followers, 7)
-    monthly_f = _period_growth(dates, followers, 30)
-    weekly_p  = _period_growth(dates, posts, 7)
-    monthly_p = _period_growth(dates, posts, 30)
+    weekly_f  = _calendar_period_growth(dates, followers, 'week')
+    monthly_f = _calendar_period_growth(dates, followers, 'month')
+    weekly_p  = _calendar_period_growth(dates, posts,     'week')
+    monthly_p = _calendar_period_growth(dates, posts,     'month')
 
     return {
         "has_data":          True,
@@ -177,48 +177,78 @@ def _build_stats(username, records):
     }
 
 
-def _period_growth(dates, values, days):
+def _calendar_period_growth(dates, values, period='week'):
     """
-    Growth over the last `days` days compared to the previous `days` days.
-    Returns dict with growth, pct, prev_growth, trend.
+    Growth of the PREVIOUS complete calendar period.
+    period='week'  → segunda–domingo da semana passada
+    period='month' → 1º–último dia do mês passado
+    Compara com o período anterior a esse para calcular trend.
+    Retorna: growth, pct, prev_growth, trend, label (período formatado).
     """
     if not dates or not values:
-        return {"growth": 0, "pct": 0.0, "prev_growth": 0, "trend": "stable"}
+        return {"growth": 0, "pct": 0.0, "prev_growth": 0, "trend": "stable", "label": "—"}
 
-    now = datetime.now()
-    cutoff      = now - timedelta(days=days)
-    cutoff_prev = now - timedelta(days=days * 2)
+    today = datetime.now().date()
 
     parsed = []
     for d, v in zip(dates, values):
         try:
-            parsed.append((datetime.strptime(d, "%d/%m/%Y"), int(v)))
+            parsed.append((datetime.strptime(d, "%d/%m/%Y").date(), int(v)))
         except Exception:
             pass
-
     if not parsed:
-        return {"growth": 0, "pct": 0.0, "prev_growth": 0, "trend": "stable"}
+        return {"growth": 0, "pct": 0.0, "prev_growth": 0, "trend": "stable", "label": "—"}
 
-    latest = parsed[-1][1]
+    if period == 'week':
+        monday_curr = today - timedelta(days=today.weekday())
+        start  = monday_curr - timedelta(days=7)   # 2ª da semana passada
+        end    = monday_curr - timedelta(days=1)   # dom da semana passada
+        start2 = start - timedelta(days=7)          # 2ª de 2 semanas atrás
+        end2   = start - timedelta(days=1)          # dom de 2 semanas atrás
+        label  = f"{start.strftime('%d/%m')} – {end.strftime('%d/%m')}"
+    else:  # month
+        first_curr = today.replace(day=1)
+        last_prev  = first_curr - timedelta(days=1)
+        first_prev = last_prev.replace(day=1)
+        start  = first_prev
+        end    = last_prev
+        day_before_start = start - timedelta(days=1)
+        last_prev2  = day_before_start
+        first_prev2 = last_prev2.replace(day=1)
+        start2 = first_prev2
+        end2   = last_prev2
+        meses  = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+        label  = f"{meses[start.month - 1]}/{start.year}"
 
-    # Value closest to (but not after) cutoff
-    val_cutoff = None
-    val_prev   = None
-    for dt, v in parsed:
-        if dt <= cutoff:
-            val_cutoff = v
-        if dt <= cutoff_prev:
-            val_prev = v
+    def val_at_or_before(target):
+        """Retorna o valor mais recente cujo date <= target, ou None."""
+        result = None
+        for dt, v in parsed:
+            if dt <= target:
+                result = v
+        return result
 
-    if val_cutoff is None:
-        val_cutoff = parsed[0][1]
+    # Valor ao final do período anterior (end)
+    val_end = val_at_or_before(end)
+    # Valor logo antes do período começar (baseline)
+    val_start = val_at_or_before(start - timedelta(days=1))
 
-    growth     = latest - val_cutoff
-    pct        = round(growth / val_cutoff * 100, 2) if val_cutoff else 0.0
-    prev_growth = (val_cutoff - val_prev) if val_prev is not None else 0
-    trend = "up" if growth > prev_growth else ("down" if growth < prev_growth else "stable")
+    # Mesmo para o período de comparação
+    val_end2   = val_at_or_before(end2)
+    val_start2 = val_at_or_before(start2 - timedelta(days=1))
 
-    return {"growth": growth, "pct": pct, "prev_growth": prev_growth, "trend": trend}
+    # Fallbacks: se não tiver dados do período usa o que tiver
+    if val_end is None:
+        val_end = parsed[-1][1]
+    if val_start is None:
+        val_start = parsed[0][1]
+
+    growth      = val_end - val_start
+    pct         = round(growth / val_start * 100, 2) if val_start else 0.0
+    prev_growth = (val_end2 - val_start2) if (val_end2 is not None and val_start2 is not None) else 0
+    trend       = "up" if growth > prev_growth else ("down" if growth < prev_growth else "stable")
+
+    return {"growth": growth, "pct": pct, "prev_growth": prev_growth, "trend": trend, "label": label}
 
 
 # ── Decorators ───────────────────────────────────────────────────────────────

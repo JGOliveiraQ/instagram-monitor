@@ -536,13 +536,13 @@
           <div class="sc-top"><div class="sc-icon ic-green">📈</div>${trendPill(wf.trend, wf.prev_growth)}</div>
           <div class="sc-value ${Number(wf.growth)>=0?'pos':'neg'}">${fmtSigned(wf.growth)}</div>
           <div class="sc-label">Crescimento semanal</div>
-          <div class="sc-sub">${wf.pct}% — últimos 7 dias</div>
+          <div class="sc-sub">${wf.pct}% — ${wf.label}</div>
         </div>
         <div class="stat-card">
           <div class="sc-top"><div class="sc-icon ic-cyan">🚀</div>${trendPill(mf.trend, mf.prev_growth)}</div>
           <div class="sc-value ${Number(mf.growth)>=0?'pos':'neg'}">${fmtSigned(mf.growth)}</div>
           <div class="sc-label">Crescimento mensal</div>
-          <div class="sc-sub">${mf.pct}% — últimos 30 dias</div>
+          <div class="sc-sub">${mf.pct}% — ${mf.label}</div>
         </div>
         <div class="stat-card">
           <div class="sc-top"><div class="sc-icon ic-blue">🏆</div></div>
@@ -565,13 +565,13 @@
           <div class="sc-top"><div class="sc-icon ic-pink">📅</div>${trendPill(wp.trend, wp.prev_growth)}</div>
           <div class="sc-value ${Number(wp.growth)>=0?'pos':'neg'}">${fmtSigned(wp.growth)}</div>
           <div class="sc-label">Posts esta semana</div>
-          <div class="sc-sub">novos em 7 dias</div>
+          <div class="sc-sub">${wp.label}</div>
         </div>
         <div class="stat-card">
           <div class="sc-top"><div class="sc-icon ic-blue">🗓️</div>${trendPill(mp.trend, mp.prev_growth)}</div>
           <div class="sc-value ${Number(mp.growth)>=0?'pos':'neg'}">${fmtSigned(mp.growth)}</div>
           <div class="sc-label">Posts este mês</div>
-          <div class="sc-sub">novos em 30 dias</div>
+          <div class="sc-sub">${mp.label}</div>
         </div>`;
     }
 
