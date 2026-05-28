@@ -13,6 +13,7 @@
     :root {
       --bg:     #0a0a0a;
       --card:   #111111;
+      --card2:  #161616;
       --border: rgba(255,255,255,0.08);
       --p1:     #8b5cf6;
       --p2:     #6366f1;
@@ -75,7 +76,7 @@
     .clients-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 12px; margin-bottom: 28px;
+      gap: 12px;
     }
     .client-card {
       background: var(--card);
@@ -86,16 +87,12 @@
       position: relative; overflow: hidden;
     }
     .client-card:hover { transform: translateY(-1px); border-color: rgba(139,92,246,0.35); }
-    .client-card.active {
-      border-color: var(--p1);
-      box-shadow: 0 0 0 1px rgba(139,92,246,0.15);
-    }
     .client-card::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
       background: linear-gradient(90deg, transparent, rgba(139,92,246,0.7), transparent);
       opacity: 0; transition: opacity 0.2s;
     }
-    .client-card.active::before, .client-card:hover::before { opacity: 1; }
+    .client-card:hover::before { opacity: 1; }
 
     .cc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     .cc-name { font-size: 13px; font-weight: 600; }
@@ -107,57 +104,156 @@
     .cc-growth.pos { color: var(--green); }
     .cc-growth.neg { color: var(--red); }
 
-    /* ── Detail panel ── */
-    .detail-panel {
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.75);
+      backdrop-filter: blur(4px);
+      overflow-y: auto;
+      padding: 24px 16px 48px;
+    }
+    .modal-overlay.open { display: flex; align-items: flex-start; justify-content: center; }
+
+    .modal-panel {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      width: 100%; max-width: 880px;
+      padding: 26px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.75);
+      animation: modal-in 0.24s cubic-bezier(0.34,1.4,0.64,1);
+    }
+    @keyframes modal-in {
+      from { opacity: 0; transform: scale(0.96) translateY(14px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    /* ── Modal header ── */
+    .modal-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      padding-bottom: 18px; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-client-name  { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .modal-range-text   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .modal-header-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-top: 2px; }
+
+    .modal-close {
+      width: 32px; height: 32px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 8px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; transition: background 0.2s, color 0.2s, border-color 0.2s;
+    }
+    .modal-close:hover { background: rgba(239,68,68,0.12); color: var(--red); border-color: rgba(239,68,68,0.3); }
+
+    .modal-section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+      text-transform: uppercase; color: var(--muted);
+      margin: 20px 0 10px;
+    }
+
+    /* ── Stat grid (same pattern as dashboard) ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 16px 14px;
+      position: relative; overflow: hidden;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .stat-card:hover { border-color: rgba(139,92,246,0.3); transform: translateY(-1px); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent);
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .stat-card:hover::before { opacity: 1; }
+
+    .sc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .sc-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 14px;
+    }
+    .ic-purple { background: rgba(139,92,246,0.15); }
+    .ic-green  { background: rgba(16,185,129,0.15); }
+    .ic-cyan   { background: rgba(6,182,212,0.15); }
+    .ic-orange { background: rgba(251,146,60,0.15); }
+    .ic-blue   { background: rgba(59,130,246,0.15); }
+    .ic-pink   { background: rgba(236,72,153,0.15); }
+
+    .trend-pill {
+      font-size: 10px; font-weight: 600;
+      padding: 2px 7px; border-radius: 20px;
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    .trend-up   { background: rgba(16,185,129,0.12); color: var(--green); }
+    .trend-down { background: rgba(239,68,68,0.12);  color: var(--red); }
+    .trend-flat { background: rgba(100,116,139,0.12); color: var(--muted); }
+
+    .sc-value { font-size: 22px; font-weight: 700; letter-spacing: -0.4px; line-height: 1; }
+    .sc-value.pos { color: var(--green); }
+    .sc-value.neg { color: var(--red); }
+    .sc-label { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .sc-sub   { font-size: 10px; color: var(--muted); margin-top: 5px; opacity: 0.7; }
+
+    /* ── Chart card ── */
+    .chart-card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 22px;
+      padding: 18px 18px 14px;
+      margin-top: 20px;
     }
-    .detail-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 20px;
-    }
-    .detail-header h2 { font-size: 15px; font-weight: 600; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .chart-header h2 { font-size: 14px; font-weight: 600; }
     .range-badge { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.04); padding: 4px 10px; border-radius: 6px; }
+    .chart-wrap { position: relative; height: 240px; }
 
-    /* sub-stats grid inside detail */
-    .sub-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px; margin-bottom: 20px;
+    /* ── Análise cards ── */
+    .analise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+    .analise-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px;
+      display: flex; gap: 12px; align-items: flex-start;
     }
-    .sub-stat {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      border-radius: 10px; padding: 13px 14px;
+    .analise-icon  { font-size: 20px; flex-shrink: 0; line-height: 1; margin-top: 2px; }
+    .analise-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+    .analise-text  { font-size: 11px; color: var(--muted); line-height: 1.55; }
+
+    /* ── PDF button ── */
+    .btn-pdf {
+      display: flex; align-items: center; gap: 5px;
+      background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);
+      color: #a78bfa; font-size: 12px; font-weight: 500;
+      padding: 6px 13px; border-radius: 8px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: background 0.2s, color 0.2s;
     }
-    .ss-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .ss-val { font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
-    .ss-val.pos { color: var(--green); }
-    .ss-val.neg { color: var(--red); }
-    .ss-trend { font-size: 11px; margin-top: 4px; }
-    .ss-trend.pos { color: var(--green); }
-    .ss-trend.neg { color: var(--red); }
-    .ss-trend.flat { color: var(--muted); }
+    .btn-pdf:hover { background: rgba(139,92,246,0.16); color: #c4b5fd; }
 
-    .chart-wrap { position: relative; height: 260px; }
-
-    .loading, .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+    .loading, .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
     .spinner {
-      width: 32px; height: 32px;
+      width: 28px; height: 28px;
       border: 2.5px solid rgba(139,92,246,0.2);
       border-top-color: var(--p1);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin: 0 auto 12px;
+      margin: 0 auto 10px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .empty-icon { font-size: 36px; margin-bottom: 10px; }
-    .empty-state h3 { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+    .empty-icon { font-size: 30px; margin-bottom: 8px; }
+    .empty-state h3 { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
 
     @media (max-width: 600px) {
       main { padding: calc(var(--nav-h) + 20px) 14px 36px; }
+      .modal-overlay { padding: 10px 8px 32px; }
+      .modal-panel { padding: 16px; border-radius: 14px; }
     }
 
     /* ── Wipe animation ── */
@@ -185,6 +281,7 @@
     [data-theme="light"] {
       --bg:     #eef0f6;
       --card:   #ffffff;
+      --card2:  #f5f6fb;
       --border: rgba(0,0,0,0.08);
       --text:   #0f172a;
       --muted:  #64748b;
@@ -196,31 +293,38 @@
       border-bottom-color: rgba(0,0,0,0.09);
     }
     [data-theme="light"] .client-card,
-    [data-theme="light"] .detail-panel {
-      box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.04);
+    [data-theme="light"] .stat-card,
+    [data-theme="light"] .chart-card,
+    [data-theme="light"] .analise-card {
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 16px rgba(0,0,0,0.04);
       border-color: rgba(0,0,0,0.07);
     }
-    [data-theme="light"] .client-card:hover  { border-color: rgba(139,92,246,0.35); }
-    [data-theme="light"] .client-card.active { border-color: var(--p1); }
-    [data-theme="light"] .sub-stat { background: rgba(0,0,0,0.025); border-color: rgba(0,0,0,0.06); }
-    [data-theme="light"] .cc-dot   { background: rgba(0,0,0,0.12); }
+    [data-theme="light"] .client-card:hover { border-color: rgba(139,92,246,0.35); }
+    [data-theme="light"] .stat-card:hover   { border-color: rgba(139,92,246,0.35); }
+    [data-theme="light"] .modal-panel {
+      border-color: rgba(0,0,0,0.1);
+      box-shadow: 0 32px 100px rgba(0,0,0,0.18);
+    }
+    [data-theme="light"] .modal-close { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
+    [data-theme="light"] .modal-close:hover { background: rgba(220,38,38,0.08); border-color: rgba(220,38,38,0.25); color: #dc2626; }
+    [data-theme="light"] .ic-purple { background: rgba(139,92,246,0.1); }
+    [data-theme="light"] .ic-green  { background: rgba(5,150,105,0.1); }
+    [data-theme="light"] .ic-cyan   { background: rgba(6,182,212,0.1); }
+    [data-theme="light"] .ic-orange { background: rgba(234,88,12,0.1); }
+    [data-theme="light"] .ic-blue   { background: rgba(37,99,235,0.1); }
+    [data-theme="light"] .ic-pink   { background: rgba(219,39,119,0.1); }
+    [data-theme="light"] .trend-up   { background: rgba(5,150,105,0.1);   color: #059669; }
+    [data-theme="light"] .trend-down { background: rgba(220,38,38,0.1);   color: #dc2626; }
+    [data-theme="light"] .trend-flat { background: rgba(100,116,139,0.1); color: #64748b; }
     [data-theme="light"] .range-badge { background: rgba(0,0,0,0.04); }
+    [data-theme="light"] .cc-dot     { background: rgba(0,0,0,0.12); }
     [data-theme="light"] .admin-badge { background: rgba(251,146,60,0.1); border-color: rgba(251,146,60,0.25); }
     [data-theme="light"] .btn-logout  { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: #64748b; }
     [data-theme="light"] .btn-logout:hover { background: rgba(0,0,0,0.08); color: #0f172a; }
     [data-theme="light"] .theme-toggle { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); }
     [data-theme="light"] .theme-toggle:hover { background: rgba(0,0,0,0.09); color: #0f172a; }
-    [data-theme="light"] .section-label { color: #94a3b8; }
-
-    .btn-pdf {
-      display: flex; align-items: center; gap: 5px;
-      background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.25);
-      color: #a78bfa; font-size: 12px; font-weight: 500;
-      padding: 6px 13px; border-radius: 8px;
-      cursor: pointer; font-family: 'Inter', sans-serif;
-      transition: background 0.2s, color 0.2s;
-    }
-    .btn-pdf:hover { background: rgba(139,92,246,0.16); color: #c4b5fd; }
+    [data-theme="light"] .section-label        { color: #94a3b8; }
+    [data-theme="light"] .modal-section-label  { color: #94a3b8; }
     [data-theme="light"] .btn-pdf { background: rgba(139,92,246,0.07); border-color: rgba(139,92,246,0.2); color: #7c3aed; }
     [data-theme="light"] .btn-pdf:hover { background: rgba(139,92,246,0.14); }
 
@@ -276,7 +380,7 @@
   <main>
     <div class="page-header">
       <h1>Painel Administrativo</h1>
-      <p>Visão geral de todos os clientes monitorados</p>
+      <p>Clique em um cliente para abrir o relatório completo</p>
     </div>
 
     <div class="section-label">Clientes</div>
@@ -295,58 +399,52 @@
       </div>
       {% endfor %}
     </div>
+  </main>
 
-    <div class="detail-panel" id="detail-panel">
-      <div class="detail-header">
-        <h2 id="detail-title">Selecione um cliente acima</h2>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="range-badge" id="range-badge">—</span>
-          <button class="btn-pdf" id="btn-pdf-detail" onclick="gerarPDF()" style="display:none">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+  <!-- ── Modal ── -->
+  <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+    <div class="modal-panel" id="modal-panel">
+
+      <div class="modal-header">
+        <div>
+          <div class="modal-client-name" id="modal-name">—</div>
+          <div class="modal-range-text" id="modal-range">—</div>
+        </div>
+        <div class="modal-header-right">
+          <button class="btn-pdf" id="modal-btn-pdf" onclick="gerarPDF()" style="display:none">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+            </svg>
             Gerar PDF
           </button>
+          <button class="modal-close" onclick="closeModal()" aria-label="Fechar">✕</button>
         </div>
       </div>
 
-      <div class="sub-stats" id="sub-stats" style="display:none">
-        <div class="sub-stat">
-          <div class="ss-label">Seguidores atuais</div>
-          <div class="ss-val" id="ss-current">—</div>
+      <div class="modal-section-label" style="margin-top:0">Seguidores</div>
+      <div class="stats-grid" id="modal-grid-f"></div>
+
+      <div class="modal-section-label">Publicações</div>
+      <div class="stats-grid" id="modal-grid-p"></div>
+
+      <div class="chart-card">
+        <div class="chart-header">
+          <h2>Seguidores &amp; Publicações</h2>
+          <span class="range-badge" id="modal-chart-range">—</span>
         </div>
-        <div class="sub-stat">
-          <div class="ss-label">Crescimento semanal</div>
-          <div class="ss-val" id="ss-wf">—</div>
-          <div class="ss-trend" id="st-wf"></div>
-        </div>
-        <div class="sub-stat">
-          <div class="ss-label">Crescimento mensal</div>
-          <div class="ss-val" id="ss-mf">—</div>
-          <div class="ss-trend" id="st-mf"></div>
-        </div>
-        <div class="sub-stat">
-          <div class="ss-label">Posts totais</div>
-          <div class="ss-val" id="ss-posts">—</div>
-        </div>
-        <div class="sub-stat">
-          <div class="ss-label">Posts esta semana</div>
-          <div class="ss-val" id="ss-wp">—</div>
-          <div class="ss-trend" id="st-wp"></div>
-        </div>
-        <div class="sub-stat">
-          <div class="ss-label">Posts este mês</div>
-          <div class="ss-val" id="ss-mp">—</div>
-          <div class="ss-trend" id="st-mp"></div>
+        <div class="chart-wrap" id="modal-chart-wrap">
+          <div class="loading"><div class="spinner"></div><p>Carregando…</p></div>
         </div>
       </div>
 
-      <div class="chart-wrap" id="chart-wrap">
-        <div class="empty-state">
-          <div class="empty-icon">👆</div>
-          <h3>Clique em um cliente para ver o gráfico</h3>
-        </div>
-      </div>
+      <div class="modal-section-label">Análise de Engajamento</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Sugestões personalizadas com base no histórico de crescimento</p>
+      <div class="analise-grid" id="modal-analise-grid"></div>
+
     </div>
-  </main>
+  </div>
 
   <a class="wa-btn" href="https://wa.me/5531985982636?text=Ol%C3%A1%2C%20preciso%20de%20ajuda%20na%20plataforma%20Instagram%20Monitor." target="_blank" rel="noopener" aria-label="Suporte WhatsApp">
     <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="white">
@@ -408,24 +506,73 @@
     }
     function fmtSigned(n) { n = Number(n); return (n >= 0 ? '+' : '') + fmt(n); }
 
-    function trendLabel(t, prev) {
+    function trendPill(trend, prev) {
       const p = fmt(Math.abs(prev));
-      if (t === 'up')   return { text: '↑ melhor que ' + p, cls: 'pos' };
-      if (t === 'down') return { text: '↓ menor que ' + p,  cls: 'neg' };
-      return { text: '→ estável', cls: 'flat' };
+      if (trend === 'up')   return `<span class="trend-pill trend-up">↑ vs ${p}</span>`;
+      if (trend === 'down') return `<span class="trend-pill trend-down">↓ vs ${p}</span>`;
+      return `<span class="trend-pill trend-flat">→ estável</span>`;
     }
 
-    function applyTrend(trendId, valId, val, trend, prev, signed = true) {
-      const vEl = document.getElementById(valId);
-      const tEl = document.getElementById(trendId);
-      if (!vEl) return;
-      vEl.textContent = signed ? fmtSigned(val) : fmt(val);
-      if (signed) vEl.className = 'ss-val ' + (Number(val) >= 0 ? 'pos' : 'neg');
-      if (tEl) {
-        const { text, cls } = trendLabel(trend, prev);
-        tEl.textContent = text;
-        tEl.className = 'ss-trend ' + cls;
-      }
+    function loadingCards(n) {
+      return Array(n).fill(0).map(() =>
+        `<div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-purple" style="opacity:.35">·</div></div>
+          <div class="sc-value" style="color:var(--muted);font-size:14px">—</div>
+          <div class="sc-label">carregando</div>
+        </div>`
+      ).join('');
+    }
+
+    function buildFollowerCards(d) {
+      const wf = d.weekly_followers, mf = d.monthly_followers;
+      return `
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-purple">👥</div></div>
+          <div class="sc-value">${fmt(d.current_followers)}</div>
+          <div class="sc-label">Seguidores atuais</div>
+          <div class="sc-sub">${d.dates.length} registros coletados</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-green">📈</div>${trendPill(wf.trend, wf.prev_growth)}</div>
+          <div class="sc-value ${Number(wf.growth)>=0?'pos':'neg'}">${fmtSigned(wf.growth)}</div>
+          <div class="sc-label">Crescimento semanal</div>
+          <div class="sc-sub">${wf.pct}% — últimos 7 dias</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-cyan">🚀</div>${trendPill(mf.trend, mf.prev_growth)}</div>
+          <div class="sc-value ${Number(mf.growth)>=0?'pos':'neg'}">${fmtSigned(mf.growth)}</div>
+          <div class="sc-label">Crescimento mensal</div>
+          <div class="sc-sub">${mf.pct}% — últimos 30 dias</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-blue">🏆</div></div>
+          <div class="sc-value ${Number(d.growth_absolute)>=0?'pos':'neg'}">${fmtSigned(d.growth_absolute)}</div>
+          <div class="sc-label">Crescimento total</div>
+          <div class="sc-sub">desde ${d.dates[0]}</div>
+        </div>`;
+    }
+
+    function buildPostCards(d) {
+      const wp = d.weekly_posts, mp = d.monthly_posts;
+      return `
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-orange">📸</div></div>
+          <div class="sc-value">${fmt(d.current_posts)}</div>
+          <div class="sc-label">Posts totais</div>
+          <div class="sc-sub">publicações no perfil</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-pink">📅</div>${trendPill(wp.trend, wp.prev_growth)}</div>
+          <div class="sc-value ${Number(wp.growth)>=0?'pos':'neg'}">${fmtSigned(wp.growth)}</div>
+          <div class="sc-label">Posts esta semana</div>
+          <div class="sc-sub">novos em 7 dias</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-blue">🗓️</div>${trendPill(mp.trend, mp.prev_growth)}</div>
+          <div class="sc-value ${Number(mp.growth)>=0?'pos':'neg'}">${fmtSigned(mp.growth)}</div>
+          <div class="sc-label">Posts este mês</div>
+          <div class="sc-sub">novos em 30 dias</div>
+        </div>`;
     }
 
     async function fetchStats(id) {
@@ -436,14 +583,12 @@
       return d;
     }
 
-    // Pre-load summary cards — UMA única chamada ao servidor
+    // Pre-load summary cards — single server call
     (async () => {
       try {
         const res = await fetch('/api/all_stats');
         const all = await res.json();
-        // Popula cache com todos os dados de uma vez
         Object.assign(cache, all);
-        // Atualiza os cards
         CLIENTS.forEach(c => {
           const d = all[c.id];
           if (!d) return;
@@ -462,47 +607,68 @@
       } catch { /* silent */ }
     })();
 
+    // ── Modal helpers ──────────────────────
+    function openModal() {
+      document.getElementById('modal-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+      if (chartInst) { chartInst.destroy(); chartInst = null; }
+      currentClientId = null;
+      currentClientDisplay = null;
+    }
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('modal-overlay')) closeModal();
+    }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ── Open client modal ──────────────────
     async function selectClient(id, display) {
-      document.querySelectorAll('.client-card').forEach(el => el.classList.remove('active'));
-      document.getElementById('card-' + id).classList.add('active');
       currentClientId = id;
       currentClientDisplay = display;
-      document.getElementById('btn-pdf-detail').style.display = 'none';
-      document.getElementById('detail-title').textContent = display;
-      document.getElementById('sub-stats').style.display = 'none';
-      document.getElementById('chart-wrap').innerHTML =
+
+      document.getElementById('modal-name').textContent = display;
+      document.getElementById('modal-range').textContent = 'Carregando dados…';
+      document.getElementById('modal-chart-range').textContent = '—';
+      document.getElementById('modal-btn-pdf').style.display = 'none';
+      document.getElementById('modal-grid-f').innerHTML = loadingCards(4);
+      document.getElementById('modal-grid-p').innerHTML = loadingCards(3);
+      document.getElementById('modal-chart-wrap').innerHTML =
         '<div class="loading"><div class="spinner"></div><p>Carregando…</p></div>';
+      document.getElementById('modal-analise-grid').innerHTML = '';
+      openModal();
 
       try {
         const d = await fetchStats(id);
 
         if (!d.has_data) {
-          document.getElementById('chart-wrap').innerHTML =
-            `<div class="empty-state"><div class="empty-icon">📊</div>
+          document.getElementById('modal-range').textContent = 'sem registros';
+          document.getElementById('modal-grid-f').innerHTML =
+            `<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📊</div>
              <h3>Sem dados para ${display}</h3><p>Execute o coletor para registrar os primeiros dados.</p></div>`;
-          document.getElementById('range-badge').textContent = 'sem registros';
+          document.getElementById('modal-grid-p').innerHTML = '';
+          document.getElementById('modal-chart-wrap').innerHTML =
+            `<div class="empty-state"><div class="empty-icon">📊</div><h3>Sem dados ainda</h3></div>`;
           return;
         }
 
         const dates = d.dates;
-        document.getElementById('range-badge').textContent =
-          dates[0] === dates[dates.length-1] ? dates[0] : dates[0] + ' → ' + dates[dates.length-1];
+        const range = dates[0] === dates[dates.length-1] ? dates[0] : dates[0] + ' → ' + dates[dates.length-1];
+        document.getElementById('modal-range').textContent = range;
+        document.getElementById('modal-chart-range').textContent = range;
 
-        // Sub-stats
-        document.getElementById('ss-current').textContent = fmt(d.current_followers);
-        applyTrend('st-wf', 'ss-wf', d.weekly_followers.growth,  d.weekly_followers.trend,  d.weekly_followers.prev_growth);
-        applyTrend('st-mf', 'ss-mf', d.monthly_followers.growth, d.monthly_followers.trend, d.monthly_followers.prev_growth);
-        document.getElementById('ss-posts').textContent = fmt(d.current_posts);
-        applyTrend('st-wp', 'ss-wp', d.weekly_posts.growth,  d.weekly_posts.trend,  d.weekly_posts.prev_growth);
-        applyTrend('st-mp', 'ss-mp', d.monthly_posts.growth, d.monthly_posts.trend, d.monthly_posts.prev_growth);
-        document.getElementById('sub-stats').style.display = 'grid';
+        // Stat cards
+        document.getElementById('modal-grid-f').innerHTML = buildFollowerCards(d);
+        document.getElementById('modal-grid-p').innerHTML = buildPostCards(d);
 
-        // Chart
-        document.getElementById('chart-wrap').innerHTML = '<canvas id="chart"></canvas>';
-        const ctx = document.getElementById('chart').getContext('2d');
+        // Dual-line chart
+        document.getElementById('modal-chart-wrap').innerHTML = '<canvas id="modal-chart"></canvas>';
+        const ctx = document.getElementById('modal-chart').getContext('2d');
         if (chartInst) chartInst.destroy();
 
-        const grad = ctx.createLinearGradient(0, 0, 0, 260);
+        const grad = ctx.createLinearGradient(0, 0, 0, 240);
         grad.addColorStop(0, 'rgba(139,92,246,0.3)');
         grad.addColorStop(1, 'rgba(139,92,246,0.0)');
 
@@ -510,44 +676,150 @@
           type: 'line',
           data: {
             labels: d.dates,
-            datasets: [{
-              data: d.followers,
-              borderColor: '#8b5cf6', borderWidth: 2,
-              backgroundColor: grad,
-              pointBackgroundColor: '#8b5cf6',
-              pointRadius: d.followers.length > 30 ? 0 : 3,
-              pointHoverRadius: 5,
-              tension: 0.4, fill: true,
-            }]
+            datasets: [
+              {
+                label: 'Seguidores',
+                data: d.followers,
+                borderColor: '#8b5cf6', borderWidth: 2,
+                backgroundColor: grad,
+                pointBackgroundColor: '#8b5cf6',
+                pointRadius: d.followers.length > 30 ? 0 : 3,
+                pointHoverRadius: 5,
+                tension: 0.4, fill: true, yAxisID: 'y',
+              },
+              {
+                label: 'Publicações',
+                data: d.posts,
+                borderColor: '#06b6d4', borderWidth: 2,
+                backgroundColor: 'transparent',
+                pointBackgroundColor: '#06b6d4',
+                pointRadius: d.posts.length > 30 ? 0 : 3,
+                pointHoverRadius: 5,
+                tension: 0.4, fill: false, yAxisID: 'y1',
+              }
+            ]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-              legend: { display: false },
+              legend: {
+                display: true,
+                labels: {
+                  color: chartColors().ticks,
+                  usePointStyle: true, pointStyle: 'circle',
+                  font: { size: 11 }, padding: 14,
+                }
+              },
               tooltip: {
                 backgroundColor: '#1a1a1a',
                 borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1,
                 titleColor: '#64748b', bodyColor: '#f1f5f9',
-                bodyFont: { size: 14, weight: '600' }, padding: 12,
-                callbacks: { label: c => ' ' + fmt(c.parsed.y) + ' seguidores' }
+                bodyFont: { size: 13, weight: '600' }, padding: 12,
+                callbacks: {
+                  label: c => c.datasetIndex === 0
+                    ? ' ' + fmt(c.parsed.y) + ' seguidores'
+                    : ' ' + fmt(c.parsed.y) + ' posts'
+                }
               }
             },
             scales: {
               x: { grid: { color: chartColors().grid }, ticks: { color: chartColors().ticks, font: { size: 11 }, maxTicksLimit: 8 } },
-              y: { grid: { color: chartColors().grid }, ticks: { color: chartColors().ticks, font: { size: 11 }, callback: v => fmt(v) } }
+              y: {
+                position: 'left',
+                grid: { color: chartColors().grid },
+                ticks: { color: '#a78bfa', font: { size: 11 }, callback: v => fmt(v) },
+              },
+              y1: {
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                ticks: { color: '#22d3ee', font: { size: 11 }, callback: v => fmt(v) },
+              }
             }
           }
         });
 
-        document.getElementById('btn-pdf-detail').style.display = 'flex';
+        gerarAnalise(d);
+        document.getElementById('modal-btn-pdf').style.display = 'flex';
 
       } catch (err) {
-        document.getElementById('chart-wrap').innerHTML =
+        document.getElementById('modal-chart-wrap').innerHTML =
           `<div class="empty-state"><div class="empty-icon">⚠️</div>
            <h3>Erro ao carregar dados</h3><p>${err.message}</p></div>`;
       }
     }
 
+    // ── Analysis cards ─────────────────────
+    function gerarAnalise(d) {
+      const wf=Number(d.weekly_followers.growth), mf=Number(d.monthly_followers.growth);
+      const wp=Number(d.weekly_posts.growth), mp=Number(d.monthly_posts.growth);
+      const pctM=Number(d.monthly_followers.pct), cur=Number(d.current_followers);
+      const prevWf=Number(d.weekly_followers.prev_growth);
+      const cards=[];
+
+      // 1. Diagnóstico
+      let dC,dI,dTi,dTe;
+      if(mf>0&&pctM>=3){dC='#059669';dI='✅';dTi='Crescimento Forte';dTe=`Perfil cresceu +${pctM}% no último mês — acima da média. O conteúdo está convertendo bem.`;}
+      else if(mf>0){dC='#8b5cf6';dI='📈';dTi='Crescimento Estável';dTe=`Crescimento positivo de +${pctM}% no mês. Consistência de publicações é o principal motor.`;}
+      else if(mf===0){dC='#f59e0b';dI='⚠️';dTi='Crescimento Estagnado';dTe='Sem crescimento líquido no último mês. Reveja qualidade e horário das publicações.';}
+      else{dC='#dc2626';dI='🔴';dTi='Perfil em Queda';dTe=`Queda de ${Math.abs(pctM)}% no mês. Reveja o que funcionou nos meses anteriores.`;}
+      cards.push({icon:dI,color:dC,title:dTi,text:dTe});
+
+      // 2. Eficiência de conteúdo
+      if(wp>0){
+        const eff=wf/wp; let eC,eTe;
+        if(eff>=10){eC='#059669';eTe=`Cada post trouxe em média ${eff.toFixed(1)} novos seguidores esta semana — excelente conversão!`;}
+        else if(eff>=3){eC='#8b5cf6';eTe=`${eff.toFixed(1)} seguidores por post. Reels e carrosséis podem dobrar esse número.`;}
+        else if(eff>0){eC='#f59e0b';eTe=`Apenas ${eff.toFixed(1)} seguidores por post. Tente encerrar cada post com um CTA direto.`;}
+        else{eC='#dc2626';eTe='Posts desta semana não geraram seguidores líquidos. Analise formatos com melhor histórico.';}
+        cards.push({icon:'⚙️',color:eC,title:'Eficiência de Conteúdo',text:eTe});
+      } else {
+        cards.push({icon:'📸',color:'#dc2626',title:'Nenhuma Publicação Esta Semana',
+          text:'Perfis inativos por +7 dias perdem visibilidade progressivamente no algoritmo.'});
+      }
+
+      // 3. Comparativo semanal
+      const diff=wf-prevWf; let cC,cI,cTe;
+      if(diff>5){cC='#059669';cI='🚀';cTe=`+${diff} seguidores a mais que na semana anterior — crescimento acelerando.`;}
+      else if(diff>0){cC='#8b5cf6';cI='📊';cTe='Crescimento levemente maior que na semana passada. Tendência positiva.';}
+      else if(diff===0){cC='#64748b';cI='➡️';cTe='Resultado igual à semana anterior. Experimente um novo formato esta semana.';}
+      else{cC='#f59e0b';cI='📉';cTe=`Crescimento ${Math.abs(diff)} menor que na semana passada. Reveja os posts recentes.`;}
+      cards.push({icon:cI,color:cC,title:'Comparativo com Semana Anterior',text:cTe});
+
+      // 4. Projeção
+      if(mf>0){
+        const st=cur<1000?100:cur<10000?1000:cur<100000?10000:100000;
+        const nx=(Math.floor(cur/st)+1)*st;
+        const dy=Math.ceil((nx-cur)/(mf/30));
+        const lb=dy<=30?dy+' dias':(dy/30).toFixed(1)+' meses';
+        cards.push({icon:'🎯',color:'#6366f1',title:'Projeção de Crescimento',
+          text:`No ritmo atual (+${mf} seg./mês), ${nx.toLocaleString('pt-BR')} seguidores em aprox. ${lb}.`});
+      } else if(mf<0){
+        cards.push({icon:'🎯',color:'#dc2626',title:'Projeção de Crescimento',
+          text:`Com queda atual de ${Math.abs(mf)} seg./mês, é importante agir rápido para reverter esse cenário.`});
+      }
+
+      // 5. Recomendação
+      let rT; const avg=mp/4.3;
+      if(wf<0&&mf<0)  rT='Revise os últimos 10 posts e compare o engajamento. Considere arquivar posts de baixo desempenho.';
+      else if(wp===0) rT='Publique hoje. Reels de 15–30s têm maior alcance orgânico no Instagram atualmente.';
+      else if(avg<2)  rT=`Média de ${avg.toFixed(1)} posts/semana abaixo do ideal. Um calendário com 3 temas fixos/semana resolve a inconsistência.`;
+      else if(pctM>=5) rT='Perfil em alta — explore colaborações com criadores do mesmo nicho para ampliar o alcance.';
+      else            rT='Reels de 15–30s recebem prioridade máxima no algoritmo. Converta os melhores posts em Reels.';
+      cards.push({icon:'💡',color:'#8b5cf6',title:'Recomendação Principal',text:rT});
+
+      document.getElementById('modal-analise-grid').innerHTML = cards.map(t =>
+        `<div class="analise-card">
+          <div class="analise-icon">${t.icon}</div>
+          <div>
+            <div class="analise-title" style="color:${t.color}">${t.title}</div>
+            <div class="analise-text">${t.text}</div>
+          </div>
+        </div>`
+      ).join('');
+    }
+
+    // ── PDF ────────────────────────────────
     function gerarPDF() {
       if (!currentClientId || !cache[currentClientId]) return;
       const d = cache[currentClientId];
@@ -557,57 +829,115 @@
       const chartImg = chartInst ? chartInst.toBase64Image() : null;
       const today = new Date().toLocaleDateString('pt-BR');
 
-      function pf(n) { n=Number(n); if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K'; return n.toLocaleString('pt-BR'); }
-      function ps(n) { n=Number(n); return (n>=0?'+':'')+pf(n); }
-      function pc(n) { return Number(n)>=0?'#059669':'#dc2626'; }
+      function pf(n){n=Number(n);if(n>=1e6)return(n/1e6).toFixed(1).replace(/\.0$/,'')+'M';if(n>=1e3)return(n/1e3).toFixed(1).replace(/\.0$/,'')+'K';return n.toLocaleString('pt-BR');}
+      function ps(n){n=Number(n);return(n>=0?'+':'')+pf(n);}
+      function pc(n){return Number(n)>=0?'#059669':'#dc2626';}
+      function pcbg(n){return Number(n)>=0?'rgba(5,150,105,0.08)':'rgba(220,38,38,0.08)';}
+      function pcbd(n){return Number(n)>=0?'rgba(5,150,105,0.25)':'rgba(220,38,38,0.25)';}
 
-      const rows = [
-        ['Seguidores atuais',   pf(d.current_followers),                                             '#1e293b'],
-        ['Crescimento semanal', ps(d.weekly_followers.growth)+' ('+d.weekly_followers.pct+'%)',      pc(d.weekly_followers.growth)],
-        ['Crescimento mensal',  ps(d.monthly_followers.growth)+' ('+d.monthly_followers.pct+'%)',    pc(d.monthly_followers.growth)],
-        ['Crescimento total',   ps(d.growth_absolute),                                               pc(d.growth_absolute)],
-        ['Posts totais',        pf(d.current_posts),                                                 '#1e293b'],
-        ['Posts esta semana',   ps(d.weekly_posts.growth),                                           pc(d.weekly_posts.growth)],
-        ['Posts este mês',      ps(d.monthly_posts.growth),                                          pc(d.monthly_posts.growth)],
+      function cardHtml(cards){
+        return cards.map(c=>`<div style="background:${c.bg};border:1px solid ${c.border};border-radius:10px;padding:13px 15px;flex:1;min-width:110px;box-sizing:border-box">
+          <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;font-weight:600">${c.label}</div>
+          <div style="font-size:17px;font-weight:700;color:${c.color};letter-spacing:-0.3px">${c.val}</div></div>`).join('');
+      }
+
+      const fCards=[
+        {label:'Seguidores Atuais',   val:pf(d.current_followers),color:'#6d28d9',bg:'#f5f3ff',border:'#ddd6fe'},
+        {label:'Crescimento Semanal', val:ps(d.weekly_followers.growth)+' ('+d.weekly_followers.pct+'%)',  color:pc(d.weekly_followers.growth),  bg:pcbg(d.weekly_followers.growth),  border:pcbd(d.weekly_followers.growth)},
+        {label:'Crescimento Mensal',  val:ps(d.monthly_followers.growth)+' ('+d.monthly_followers.pct+'%)',color:pc(d.monthly_followers.growth), bg:pcbg(d.monthly_followers.growth), border:pcbd(d.monthly_followers.growth)},
+        {label:'Crescimento Total',   val:ps(d.growth_absolute),color:pc(d.growth_absolute),bg:pcbg(d.growth_absolute),border:pcbd(d.growth_absolute)},
+      ];
+      const pCards=[
+        {label:'Posts Totais',        val:pf(d.current_posts), color:'#ea580c',bg:'#fff7ed',border:'#fed7aa'},
+        {label:'Posts Esta Semana',   val:ps(d.weekly_posts.growth),  color:pc(d.weekly_posts.growth),  bg:pcbg(d.weekly_posts.growth),  border:pcbd(d.weekly_posts.growth)},
+        {label:'Posts Este Mês',      val:ps(d.monthly_posts.growth), color:pc(d.monthly_posts.growth), bg:pcbg(d.monthly_posts.growth), border:pcbd(d.monthly_posts.growth)},
       ];
 
-      const cardsHtml = rows.map(([label, val, color]) =>
-        `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 14px;flex:1;min-width:140px;box-sizing:border-box">
-          <div style="font-size:9px;color:#6d28d9;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-weight:600">${label}</div>
-          <div style="font-size:17px;font-weight:700;color:${color};letter-spacing:-0.3px">${val}</div>
-        </div>`
-      ).join('');
+      // Recompute analysis
+      const wfv=Number(d.weekly_followers.growth),mfv=Number(d.monthly_followers.growth);
+      const wpv=Number(d.weekly_posts.growth),mpv=Number(d.monthly_posts.growth);
+      const pctMv=Number(d.monthly_followers.pct),curv=Number(d.current_followers);
+      const prevWfv=Number(d.weekly_followers.prev_growth);
+      const analCards=[];
 
-      const html = `
-        <div style="font-family:Arial,sans-serif;background:#ffffff;padding:32px;width:680px;box-sizing:border-box">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #8b5cf6;margin-bottom:22px">
-            <div>
-              <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">GCBS Monitor</div>
-              <div style="font-size:21px;font-weight:700;color:#0f172a">${display}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:3px">Relatório de seguidores no Instagram</div>
-            </div>
-            <div style="text-align:right">
-              <div style="font-size:9px;color:#94a3b8;margin-bottom:1px">GERADO EM</div>
-              <div style="font-size:12px;font-weight:600;color:#475569">${today}</div>
-              <div style="font-size:9px;color:#94a3b8;margin-top:7px;margin-bottom:1px">PERÍODO</div>
-              <div style="font-size:12px;font-weight:600;color:#475569">${range}</div>
-            </div>
-          </div>
-          <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Métricas</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px">${cardsHtml}</div>
-          ${chartImg ? `
-          <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Histórico de seguidores</div>
-          <img src="${chartImg}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0" />` : ''}
-          <div style="margin-top:22px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center">
-            GCBS Monitor · Relatório gerado em ${today}
-          </div>
-        </div>`;
+      let dC,dI,dTi,dTe;
+      if(mfv>0&&pctMv>=3){dC='#059669';dI='✅';dTi='Crescimento Forte';dTe=`Perfil cresceu +${pctMv}% no último mês — acima da média.`;}
+      else if(mfv>0){dC='#8b5cf6';dI='📈';dTi='Crescimento Estável';dTe=`Crescimento positivo de +${pctMv}% no mês.`;}
+      else if(mfv===0){dC='#f59e0b';dI='⚠️';dTi='Crescimento Estagnado';dTe='Sem crescimento líquido. Reveja qualidade e horários.';}
+      else{dC='#dc2626';dI='🔴';dTi='Perfil em Queda';dTe=`Queda de ${Math.abs(pctMv)}% no mês. Reveja o que funcionou antes.`;}
+      analCards.push({icon:dI,color:dC,title:dTi,text:dTe});
 
-      const win = window.open('', '_blank');
-      if (!win) { alert('Permita popups neste site para gerar o PDF.'); return; }
-      const s = '<scr' + 'ipt>setTimeout(function(){window.print();},400);<' + '/scr' + 'ipt>';
+      if(wpv>0){
+        const eff=wfv/wpv;let eC,eTe;
+        if(eff>=10){eC='#059669';eTe=`Cada post trouxe ${eff.toFixed(1)} novos seguidores — excelente conversão!`;}
+        else if(eff>=3){eC='#8b5cf6';eTe=`${eff.toFixed(1)} seguidores por post. Reels podem dobrar esse número.`;}
+        else if(eff>0){eC='#f59e0b';eTe=`Apenas ${eff.toFixed(1)} seguidores por post. Adicione CTAs claros.`;}
+        else{eC='#dc2626';eTe='Posts desta semana não geraram seguidores líquidos.';}
+        analCards.push({icon:'⚙️',color:eC,title:'Eficiência de Conteúdo',text:eTe});
+      } else {
+        analCards.push({icon:'📸',color:'#dc2626',title:'Nenhuma Publicação Esta Semana',text:'Perfis inativos perdem visibilidade no algoritmo.'});
+      }
+
+      const diff=wfv-prevWfv;let cC,cI,cTe;
+      if(diff>5){cC='#059669';cI='🚀';cTe=`+${diff} seguidores a mais que na semana anterior.`;}
+      else if(diff>0){cC='#8b5cf6';cI='📊';cTe='Crescimento levemente maior que na semana passada.';}
+      else if(diff===0){cC='#64748b';cI='➡️';cTe='Resultado igual à semana anterior.';}
+      else{cC='#f59e0b';cI='📉';cTe=`Crescimento ${Math.abs(diff)} menor que na semana passada.`;}
+      analCards.push({icon:cI,color:cC,title:'Comparativo Semanal',text:cTe});
+
+      if(mfv>0){
+        const st=curv<1000?100:curv<10000?1000:curv<100000?10000:100000;
+        const nx=(Math.floor(curv/st)+1)*st;
+        const dy=Math.ceil((nx-curv)/(mfv/30));
+        const lb=dy<=30?dy+' dias':(dy/30).toFixed(1)+' meses';
+        analCards.push({icon:'🎯',color:'#6366f1',title:'Projeção de Crescimento',text:`No ritmo atual, ${nx.toLocaleString('pt-BR')} seguidores em aprox. ${lb}.`});
+      }
+
+      let rT;const avg=mpv/4.3;
+      if(wfv<0&&mfv<0) rT='Revise os últimos 10 posts. Considere arquivar os de baixo desempenho.';
+      else if(wpv===0) rT='Publique hoje. Reels de 15–30s têm maior alcance orgânico.';
+      else if(avg<2)   rT=`Média de ${avg.toFixed(1)} posts/semana abaixo do ideal. Mire em 3+/semana.`;
+      else if(pctMv>=5) rT='Perfil em alta — explore colaborações para ampliar o alcance.';
+      else             rT='Reels de 15–30s recebem prioridade máxima no algoritmo.';
+      analCards.push({icon:'💡',color:'#8b5cf6',title:'Recomendação Principal',text:rT});
+
+      const analHtml=analCards.map(c=>`<div style="display:flex;gap:12px;background:#fafafa;border:1px solid #e2e8f0;border-left:3px solid ${c.color};border-radius:8px;padding:12px 14px;margin-bottom:8px;box-sizing:border-box">
+        <div style="font-size:17px;flex-shrink:0;line-height:1;margin-top:1px">${c.icon}</div>
+        <div><div style="font-size:11px;font-weight:700;color:${c.color};margin-bottom:3px">${c.title}</div>
+        <div style="font-size:11px;color:#475569;line-height:1.5">${c.text}</div></div></div>`).join('');
+
+      const html=`<div style="font-family:Arial,sans-serif;background:#ffffff;padding:28px 32px;max-width:720px;box-sizing:border-box">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #8b5cf6;margin-bottom:22px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">GCBS Monitor — Instagram</div>
+            <div style="font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.3px">${display}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:3px">Relatório de desempenho no Instagram</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:9px;color:#94a3b8;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px">Gerado em</div>
+            <div style="font-size:13px;font-weight:600;color:#334155">${today}</div>
+            <div style="font-size:9px;color:#94a3b8;margin-top:8px;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px">Período</div>
+            <div style="font-size:13px;font-weight:600;color:#334155">${range}</div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">👥 Seguidores</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">${cardHtml(fCards)}</div>
+        <div style="font-size:10px;font-weight:700;color:#ea580c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">📸 Publicações</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">${cardHtml(pCards)}</div>
+        ${chartImg?`<div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">📈 Histórico — Seguidores &amp; Publicações</div>
+        <img src="${chartImg}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:18px" />`:''}
+        <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px">💡 Análise de Engajamento</div>
+        ${analHtml}
+        <div style="margin-top:18px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center">
+          GCBS Monitor · Relatório gerado em ${today} · Sistema de Monitoramento Instagram
+        </div>
+      </div>`;
+
+      const win=window.open('','_blank');
+      if(!win){alert('Permita popups neste site para gerar o PDF.');return;}
+      const s='<scr'+'ipt>setTimeout(function(){window.print();},400);<'+'/scr'+'ipt>';
       win.document.open();
-      win.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>GCBS — ' + display + '<\/title><style>@page{margin:12mm;size:A4 portrait}body{margin:0;padding:0;background:#fff}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}<\/style><\/head><body>' + html + s + '<\/body><\/html>');
+      win.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>GCBS — '+display+'<\/title><style>@page{margin:10mm;size:A4 portrait}body{margin:0;padding:0;background:#fff}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}<\/style><\/head><body>'+html+s+'<\/body><\/html>');
       win.document.close();
     }
   </script>

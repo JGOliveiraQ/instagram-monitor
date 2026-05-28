@@ -375,7 +375,7 @@
     <!-- Chart -->
     <div class="chart-card">
       <div class="chart-header">
-        <h2>Histórico de Seguidores</h2>
+        <h2>Seguidores &amp; Publicações</h2>
         <span class="range-badge" id="range-badge">carregando…</span>
       </div>
       <div class="chart-wrap" id="chart-wrap">
@@ -534,36 +534,73 @@
         grad.addColorStop(0, 'rgba(139,92,246,0.3)');
         grad.addColorStop(1, 'rgba(139,92,246,0.0)');
 
+        const grad2 = ctx.createLinearGradient(0, 0, 0, 260);
+        grad2.addColorStop(0, 'rgba(6,182,212,0.12)');
+        grad2.addColorStop(1, 'rgba(6,182,212,0.0)');
+
         _pdfChart = new Chart(ctx, {
           type: 'line',
           data: {
             labels: data.dates,
-            datasets: [{
-              data: data.followers,
-              borderColor: '#8b5cf6',
-              borderWidth: 2,
-              backgroundColor: grad,
-              pointBackgroundColor: '#8b5cf6',
-              pointRadius: data.followers.length > 30 ? 0 : 3,
-              pointHoverRadius: 5,
-              tension: 0.4, fill: true,
-            }]
+            datasets: [
+              {
+                label: 'Seguidores',
+                data: data.followers,
+                borderColor: '#8b5cf6', borderWidth: 2,
+                backgroundColor: grad,
+                pointBackgroundColor: '#8b5cf6',
+                pointRadius: data.followers.length > 30 ? 0 : 3,
+                pointHoverRadius: 5,
+                tension: 0.4, fill: true, yAxisID: 'y',
+              },
+              {
+                label: 'Publicações',
+                data: data.posts,
+                borderColor: '#06b6d4', borderWidth: 2,
+                backgroundColor: 'transparent',
+                pointBackgroundColor: '#06b6d4',
+                pointRadius: data.posts.length > 30 ? 0 : 3,
+                pointHoverRadius: 5,
+                tension: 0.4, fill: false, yAxisID: 'y1',
+              }
+            ]
           },
           options: {
             responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-              legend: { display: false },
+              legend: {
+                display: true,
+                labels: {
+                  color: chartColors().ticks,
+                  usePointStyle: true, pointStyle: 'circle',
+                  font: { size: 11 }, padding: 16,
+                }
+              },
               tooltip: {
                 backgroundColor: '#1a1a1a',
                 borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1,
                 titleColor: '#64748b', bodyColor: '#f1f5f9',
-                bodyFont: { size: 14, weight: '600' }, padding: 12,
-                callbacks: { label: c => ' ' + fmt(c.parsed.y) + ' seguidores' }
+                bodyFont: { size: 13, weight: '600' }, padding: 12,
+                callbacks: {
+                  label: c => c.datasetIndex === 0
+                    ? ' ' + fmt(c.parsed.y) + ' seguidores'
+                    : ' ' + fmt(c.parsed.y) + ' posts'
+                }
               }
             },
             scales: {
               x: { grid: { color: chartColors().grid }, ticks: { color: chartColors().ticks, font: { size: 11 }, maxTicksLimit: 8 } },
-              y: { grid: { color: chartColors().grid }, ticks: { color: chartColors().ticks, font: { size: 11 }, callback: v => fmt(v) } }
+              y: {
+                position: 'left',
+                grid: { color: chartColors().grid },
+                ticks: { color: '#a78bfa', font: { size: 11 }, callback: v => fmt(v) },
+              },
+              y1: {
+                position: 'right',
+                grid: { drawOnChartArea: false },
+                ticks: { color: '#22d3ee', font: { size: 11 }, callback: v => fmt(v) },
+              }
             }
           }
         });
@@ -707,47 +744,115 @@
 
       function pf(n) { n=Number(n); if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K'; return n.toLocaleString('pt-BR'); }
       function ps(n) { n=Number(n); return (n>=0?'+':'')+pf(n); }
-      function pc(n) { return Number(n)>=0?'#059669':'#dc2626'; }
+      function pc(n)  { return Number(n)>=0?'#059669':'#dc2626'; }
+      function pcbg(n){ return Number(n)>=0?'rgba(5,150,105,0.08)':'rgba(220,38,38,0.08)'; }
+      function pcbd(n){ return Number(n)>=0?'rgba(5,150,105,0.25)':'rgba(220,38,38,0.25)'; }
 
-      const rows = [
-        ['Seguidores atuais',   pf(d.current_followers),                                             '#1e293b'],
-        ['Crescimento semanal', ps(d.weekly_followers.growth)+' ('+d.weekly_followers.pct+'%)',      pc(d.weekly_followers.growth)],
-        ['Crescimento mensal',  ps(d.monthly_followers.growth)+' ('+d.monthly_followers.pct+'%)',    pc(d.monthly_followers.growth)],
-        ['Crescimento total',   ps(d.growth_absolute),                                               pc(d.growth_absolute)],
-        ['Posts totais',        pf(d.current_posts),                                                 '#1e293b'],
-        ['Posts esta semana',   ps(d.weekly_posts.growth),                                           pc(d.weekly_posts.growth)],
-        ['Posts este mês',      ps(d.monthly_posts.growth),                                          pc(d.monthly_posts.growth)],
+      function cardHtml(cards) {
+        return cards.map(c =>
+          `<div style="background:${c.bg};border:1px solid ${c.border};border-radius:10px;padding:14px 16px;flex:1;min-width:120px;box-sizing:border-box">
+            <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;font-weight:600">${c.label}</div>
+            <div style="font-size:18px;font-weight:700;color:${c.color};letter-spacing:-0.3px">${c.val}</div>
+          </div>`
+        ).join('');
+      }
+
+      const fCards = [
+        { label:'Seguidores Atuais',    val:pf(d.current_followers),                                              color:'#6d28d9', bg:'#f5f3ff', border:'#ddd6fe' },
+        { label:'Crescimento Semanal',  val:ps(d.weekly_followers.growth)+' ('+d.weekly_followers.pct+'%)',       color:pc(d.weekly_followers.growth),  bg:pcbg(d.weekly_followers.growth),  border:pcbd(d.weekly_followers.growth) },
+        { label:'Crescimento Mensal',   val:ps(d.monthly_followers.growth)+' ('+d.monthly_followers.pct+'%)',     color:pc(d.monthly_followers.growth), bg:pcbg(d.monthly_followers.growth), border:pcbd(d.monthly_followers.growth) },
+        { label:'Crescimento Total',    val:ps(d.growth_absolute),                                                color:pc(d.growth_absolute),          bg:pcbg(d.growth_absolute),          border:pcbd(d.growth_absolute) },
+      ];
+      const pCards = [
+        { label:'Posts Totais',         val:pf(d.current_posts),                                                  color:'#ea580c', bg:'#fff7ed', border:'#fed7aa' },
+        { label:'Posts Esta Semana',    val:ps(d.weekly_posts.growth),                                            color:pc(d.weekly_posts.growth),  bg:pcbg(d.weekly_posts.growth),  border:pcbd(d.weekly_posts.growth) },
+        { label:'Posts Este Mês',       val:ps(d.monthly_posts.growth),                                           color:pc(d.monthly_posts.growth), bg:pcbg(d.monthly_posts.growth), border:pcbd(d.monthly_posts.growth) },
       ];
 
-      const cardsHtml = rows.map(([label, val, color]) =>
-        `<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:12px 14px;flex:1;min-width:140px;box-sizing:border-box">
-          <div style="font-size:9px;color:#6d28d9;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;font-weight:600">${label}</div>
-          <div style="font-size:17px;font-weight:700;color:${color};letter-spacing:-0.3px">${val}</div>
+      // Recompute analysis cards for PDF
+      const wfv=Number(d.weekly_followers.growth), mfv=Number(d.monthly_followers.growth);
+      const wpv=Number(d.weekly_posts.growth), mpv=Number(d.monthly_posts.growth);
+      const pctMv=Number(d.monthly_followers.pct), curv=Number(d.current_followers);
+      const prevWfv=Number(d.weekly_followers.prev_growth);
+      const analCards=[];
+
+      let dC,dI,dTi,dTe;
+      if(mfv>0&&pctMv>=3){dC='#059669';dI='✅';dTi='Crescimento Forte';dTe=`Perfil cresceu +${pctMv}% no último mês — acima da média.`;}
+      else if(mfv>0){dC='#8b5cf6';dI='📈';dTi='Crescimento Estável';dTe=`Crescimento positivo de +${pctMv}% no mês. Consistência é o motor.`;}
+      else if(mfv===0){dC='#f59e0b';dI='⚠️';dTi='Crescimento Estagnado';dTe='Sem crescimento líquido no último mês. Reveja qualidade e horários.';}
+      else{dC='#dc2626';dI='🔴';dTi='Perfil em Queda';dTe=`Queda de ${Math.abs(pctMv)}% no mês. Reveja o que funcionou antes.`;}
+      analCards.push({icon:dI,color:dC,title:dTi,text:dTe});
+
+      if(wpv>0){
+        const eff=wfv/wpv; let eC,eTe;
+        if(eff>=10){eC='#059669';eTe=`Cada post trouxe ${eff.toFixed(1)} novos seguidores — excelente conversão!`;}
+        else if(eff>=3){eC='#8b5cf6';eTe=`${eff.toFixed(1)} seguidores por post. Reels e carrosséis podem dobrar esse número.`;}
+        else if(eff>0){eC='#f59e0b';eTe=`Apenas ${eff.toFixed(1)} seguidores por post. Adicione CTAs claros.`;}
+        else{eC='#dc2626';eTe='Posts desta semana não geraram seguidores líquidos.';}
+        analCards.push({icon:'⚙️',color:eC,title:'Eficiência de Conteúdo',text:eTe});
+      } else {
+        analCards.push({icon:'📸',color:'#dc2626',title:'Nenhuma Publicação Esta Semana',text:'Perfis inativos por +7 dias perdem visibilidade no algoritmo.'});
+      }
+
+      const diff=wfv-prevWfv; let cC,cI,cTe;
+      if(diff>5){cC='#059669';cI='🚀';cTe=`+${diff} seguidores a mais que na semana anterior — crescimento acelerando.`;}
+      else if(diff>0){cC='#8b5cf6';cI='📊';cTe='Crescimento levemente maior que na semana passada. Tendência positiva.';}
+      else if(diff===0){cC='#64748b';cI='➡️';cTe='Resultado igual à semana anterior. Experimente um novo formato.';}
+      else{cC='#f59e0b';cI='📉';cTe=`Crescimento ${Math.abs(diff)} menor que na semana passada.`;}
+      analCards.push({icon:cI,color:cC,title:'Comparativo Semanal',text:cTe});
+
+      if(mfv>0){
+        const st=curv<1000?100:curv<10000?1000:curv<100000?10000:100000;
+        const nx=(Math.floor(curv/st)+1)*st;
+        const dy=Math.ceil((nx-curv)/(mfv/30));
+        const lb=dy<=30?dy+' dias':(dy/30).toFixed(1)+' meses';
+        analCards.push({icon:'🎯',color:'#6366f1',title:'Projeção de Crescimento',text:`No ritmo atual (+${mfv} seg./mês), ${nx.toLocaleString('pt-BR')} seguidores em aprox. ${lb}.`});
+      } else if(mfv<0){
+        analCards.push({icon:'🎯',color:'#dc2626',title:'Projeção de Crescimento',text:`Com queda de ${Math.abs(mfv)} seg./mês, é importante agir rápido para reverter esse cenário.`});
+      }
+
+      let rT; const avg=mpv/4.3;
+      if(wfv<0&&mfv<0) rT='Revise os últimos 10 posts. Considere arquivar os de baixo desempenho.';
+      else if(wpv===0) rT='Publique hoje. Reels de 15–30s têm maior alcance orgânico no Instagram.';
+      else if(avg<2)   rT=`Média de ${avg.toFixed(1)} posts/semana abaixo do ideal. Mire em 3+/semana.`;
+      else if(pctMv>=5) rT='Perfil em alta — explore colaborações com criadores do mesmo nicho.';
+      else              rT='Reels de 15–30s recebem prioridade máxima no algoritmo. Converta posts em Reels.';
+      analCards.push({icon:'💡',color:'#8b5cf6',title:'Recomendação Principal',text:rT});
+
+      const analHtml = analCards.map(c =>
+        `<div style="display:flex;gap:12px;background:#fafafa;border:1px solid #e2e8f0;border-left:3px solid ${c.color};border-radius:8px;padding:12px 14px;margin-bottom:8px;box-sizing:border-box">
+          <div style="font-size:17px;flex-shrink:0;line-height:1;margin-top:1px">${c.icon}</div>
+          <div><div style="font-size:11px;font-weight:700;color:${c.color};margin-bottom:3px">${c.title}</div>
+          <div style="font-size:11px;color:#475569;line-height:1.5">${c.text}</div></div>
         </div>`
       ).join('');
 
       const html = `
-        <div style="font-family:Arial,sans-serif;background:#ffffff;padding:32px;width:680px;box-sizing:border-box">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:3px solid #8b5cf6;margin-bottom:22px">
+        <div style="font-family:Arial,sans-serif;background:#ffffff;padding:28px 32px;max-width:720px;box-sizing:border-box">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:3px solid #8b5cf6;margin-bottom:22px">
             <div>
-              <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px">GCBS Monitor</div>
-              <div style="font-size:21px;font-weight:700;color:#0f172a">${display}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:3px">Relatório de seguidores no Instagram</div>
+              <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">GCBS Monitor — Instagram</div>
+              <div style="font-size:22px;font-weight:700;color:#0f172a;letter-spacing:-0.3px">${display}</div>
+              <div style="font-size:11px;color:#64748b;margin-top:3px">Relatório de desempenho no Instagram</div>
             </div>
             <div style="text-align:right">
-              <div style="font-size:9px;color:#94a3b8;margin-bottom:1px">GERADO EM</div>
-              <div style="font-size:12px;font-weight:600;color:#475569">${today}</div>
-              <div style="font-size:9px;color:#94a3b8;margin-top:7px;margin-bottom:1px">PERÍODO</div>
-              <div style="font-size:12px;font-weight:600;color:#475569">${range}</div>
+              <div style="font-size:9px;color:#94a3b8;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px">Gerado em</div>
+              <div style="font-size:13px;font-weight:600;color:#334155">${today}</div>
+              <div style="font-size:9px;color:#94a3b8;margin-top:8px;margin-bottom:2px;text-transform:uppercase;letter-spacing:0.5px">Período</div>
+              <div style="font-size:13px;font-weight:600;color:#334155">${range}</div>
             </div>
           </div>
-          <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Métricas</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px">${cardsHtml}</div>
+          <div style="font-size:10px;font-weight:700;color:#8b5cf6;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">👥 Seguidores</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">${cardHtml(fCards)}</div>
+          <div style="font-size:10px;font-weight:700;color:#ea580c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">📸 Publicações</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">${cardHtml(pCards)}</div>
           ${chartImg ? `
-          <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">Histórico de seguidores</div>
-          <img src="${chartImg}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0" />` : ''}
-          <div style="margin-top:22px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center">
-            GCBS Monitor · Relatório gerado em ${today}
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px">📈 Histórico — Seguidores &amp; Publicações</div>
+          <img src="${chartImg}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:18px" />` : ''}
+          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:12px">💡 Análise de Engajamento</div>
+          ${analHtml}
+          <div style="margin-top:18px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:9px;color:#94a3b8;text-align:center">
+            GCBS Monitor · Relatório gerado em ${today} · Sistema de Monitoramento Instagram
           </div>
         </div>`;
 
@@ -755,7 +860,7 @@
       if (!win) { alert('Permita popups neste site para gerar o PDF.'); return; }
       const s = '<scr' + 'ipt>setTimeout(function(){window.print();},400);<' + '/scr' + 'ipt>';
       win.document.open();
-      win.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>GCBS — ' + display + '<\/title><style>@page{margin:12mm;size:A4 portrait}body{margin:0;padding:0;background:#fff}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}<\/style><\/head><body>' + html + s + '<\/body><\/html>');
+      win.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>GCBS — ' + display + '<\/title><style>@page{margin:10mm;size:A4 portrait}body{margin:0;padding:0;background:#fff}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}<\/style><\/head><body>' + html + s + '<\/body><\/html>');
       win.document.close();
     }
   </script>
