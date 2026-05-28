@@ -177,13 +177,20 @@ def _build_stats(username, records):
     }
 
 
+def _first_monday_on_or_after(d):
+    """Retorna a primeira segunda-feira a partir da data d (inclusive)."""
+    days_ahead = (0 - d.weekday()) % 7  # 0 = segunda-feira
+    return d + timedelta(days=days_ahead)
+
+
 def _calendar_period_growth(dates, values, period='week'):
     """
-    Growth of the PREVIOUS complete calendar period.
-    period='week'  → segunda–domingo da semana passada
-    period='month' → 1º–último dia do mês passado
-    Compara com o período anterior a esse para calcular trend.
-    Retorna: growth, pct, prev_growth, trend, label (período formatado).
+    Crescimento do período ATUAL em andamento, zerado a cada:
+      week  → toda segunda-feira
+      month → primeira segunda-feira do mês atual
+
+    Compara com o período imediatamente anterior para o trend.
+    Retorna: growth, pct, prev_growth, trend, label.
     """
     if not dates or not values:
         return {"growth": 0, "pct": 0.0, "prev_growth": 0, "trend": "stable", "label": "—"}
@@ -199,54 +206,53 @@ def _calendar_period_growth(dates, values, period='week'):
     if not parsed:
         return {"growth": 0, "pct": 0.0, "prev_growth": 0, "trend": "stable", "label": "—"}
 
-    if period == 'week':
-        monday_curr = today - timedelta(days=today.weekday())
-        start  = monday_curr - timedelta(days=7)   # 2ª da semana passada
-        end    = monday_curr - timedelta(days=1)   # dom da semana passada
-        start2 = start - timedelta(days=7)          # 2ª de 2 semanas atrás
-        end2   = start - timedelta(days=1)          # dom de 2 semanas atrás
-        label  = f"{start.strftime('%d/%m')} – {end.strftime('%d/%m')}"
-    else:  # month
-        first_curr = today.replace(day=1)
-        last_prev  = first_curr - timedelta(days=1)
-        first_prev = last_prev.replace(day=1)
-        start  = first_prev
-        end    = last_prev
-        day_before_start = start - timedelta(days=1)
-        last_prev2  = day_before_start
-        first_prev2 = last_prev2.replace(day=1)
-        start2 = first_prev2
-        end2   = last_prev2
-        meses  = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
-        label  = f"{meses[start.month - 1]}/{start.year}"
-
     def val_at_or_before(target):
-        """Retorna o valor mais recente cujo date <= target, ou None."""
         result = None
         for dt, v in parsed:
             if dt <= target:
                 result = v
         return result
 
-    # Valor ao final do período anterior (end)
-    val_end = val_at_or_before(end)
-    # Valor logo antes do período começar (baseline)
-    val_start = val_at_or_before(start - timedelta(days=1))
+    meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
 
-    # Mesmo para o período de comparação
-    val_end2   = val_at_or_before(end2)
-    val_start2 = val_at_or_before(start2 - timedelta(days=1))
+    if period == 'week':
+        # Início do período atual = esta segunda-feira
+        period_start = today - timedelta(days=today.weekday())
+        # Período anterior = semana passada (segunda→domingo)
+        prev_start = period_start - timedelta(days=7)
+        prev_end   = period_start - timedelta(days=1)
+        label = f"{period_start.strftime('%d/%m')} – {today.strftime('%d/%m')}"
 
-    # Fallbacks: se não tiver dados do período usa o que tiver
-    if val_end is None:
-        val_end = parsed[-1][1]
-    if val_start is None:
-        val_start = parsed[0][1]
+    else:  # month
+        # Início do período atual = 1ª segunda do mês corrente
+        first_of_month = today.replace(day=1)
+        period_start   = _first_monday_on_or_after(first_of_month)
+        # Período anterior = do início do mês passado (1ª segunda) até véspera do período atual
+        if today.month == 1:
+            prev_year, prev_month = today.year - 1, 12
+        else:
+            prev_year, prev_month = today.year, today.month - 1
+        prev_first = today.replace(year=prev_year, month=prev_month, day=1)
+        prev_start = _first_monday_on_or_after(prev_first)
+        prev_end   = period_start - timedelta(days=1)
+        label = f"{meses[today.month - 1]}/{today.year}"
 
-    growth      = val_end - val_start
-    pct         = round(growth / val_start * 100, 2) if val_start else 0.0
-    prev_growth = (val_end2 - val_start2) if (val_end2 is not None and val_start2 is not None) else 0
-    trend       = "up" if growth > prev_growth else ("down" if growth < prev_growth else "stable")
+    # Crescimento atual = valor mais recente − valor na véspera do início do período
+    val_now   = val_at_or_before(today)
+    val_base  = val_at_or_before(period_start - timedelta(days=1))
+
+    # Crescimento do período anterior (para o comparativo de trend)
+    val_prev_end   = val_at_or_before(prev_end)
+    val_prev_start = val_at_or_before(prev_start - timedelta(days=1))
+
+    if val_now  is None: val_now  = parsed[-1][1]
+    if val_base is None: val_base = parsed[0][1]
+
+    growth      = val_now - val_base
+    pct         = round(growth / val_base * 100, 2) if val_base else 0.0
+    prev_growth = (val_prev_end - val_prev_start) \
+                  if (val_prev_end is not None and val_prev_start is not None) else 0
+    trend = "up" if growth > prev_growth else ("down" if growth < prev_growth else "stable")
 
     return {"growth": growth, "pct": pct, "prev_growth": prev_growth, "trend": trend, "label": label}
 
