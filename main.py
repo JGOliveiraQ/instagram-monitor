@@ -36,6 +36,12 @@ try:
     )
     session_cookies = dict(L.context._session.cookies)
     print("✅ Sessão carregada com sucesso")
+    # Configura Tor na sessão do Instaloader também
+    if USE_TOR:
+        L.context._session.proxies = {
+            "http":  "socks5h://127.0.0.1:9050",
+            "https": "socks5h://127.0.0.1:9050",
+        }
 except Exception as e:
     if USE_TOR:
         print(f"⚠️  Sessão não disponível ({e}) — continuando via Tor sem auth")
@@ -154,8 +160,42 @@ def build_session(cookies=None) -> requests.Session:
 
 
 def get_profile_data(username: str, cookies=None) -> dict:
-    s = build_session(cookies)
-    url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
+    from itertools import islice
+
+    # ── Tentativa 1: Instaloader Profile (sessão autenticada, mais confiável) ──
+    try:
+        profile      = instaloader.Profile.from_username(L.context, username)
+        curtidas     = 0
+        comentarios  = 0
+        recent_posts = []
+
+        for post in islice(profile.get_posts(), 12):
+            curtidas    += post.likes
+            comentarios += post.comments
+            if len(recent_posts) < 3:
+                recent_posts.append({
+                    "thumb":     post.url,
+                    "likes":     post.likes,
+                    "comments":  post.comments,
+                    "shortcode": post.shortcode,
+                })
+
+        amostras = min(12, profile.mediacount)
+        print(f"   📸 {len(recent_posts)} posts | {curtidas:,} curtidas | {comentarios:,} coment.")
+        return {
+            "followers":    profile.followers,
+            "posts":        profile.mediacount,
+            "curtidas":     curtidas,
+            "comentarios":  comentarios,
+            "amostras":     amostras,
+            "recent_posts": recent_posts,
+        }
+    except Exception as e_il:
+        print(f"   ⚠️  Instaloader Profile: {e_il} — tentando HTTP...")
+
+    # ── Tentativa 2: web_profile_info + /feed/user/ (fallback HTTP) ──────────
+    s       = build_session(cookies)
+    url     = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
     headers = {
         "x-ig-app-id":      IG_APP_ID,
         "User-Agent":       (
@@ -170,10 +210,9 @@ def get_profile_data(username: str, cookies=None) -> dict:
     }
     resp = s.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
-    user        = resp.json()["data"]["user"]
-    user_id     = user.get("id", "")
+    user    = resp.json()["data"]["user"]
+    user_id = user.get("id", "")
 
-    # Tentativa 1: edges da resposta principal
     edges       = user.get("edge_owner_to_timeline_media", {}).get("edges", [])
     curtidas    = sum(e.get("node", {}).get("edge_liked_by",         {}).get("count", 0) for e in edges)
     comentarios = sum(e.get("node", {}).get("edge_media_to_comment", {}).get("count", 0) for e in edges)
@@ -188,26 +227,28 @@ def get_profile_data(username: str, cookies=None) -> dict:
             "shortcode": node.get("shortcode", ""),
         })
 
-    # Tentativa 2: endpoint /feed/user/{id}/ (fallback quando edges vazio)
+    # Sub-fallback: /feed/user/{id}/
     if amostras == 0 and user_id:
         try:
-            feed_url  = f"https://www.instagram.com/api/v1/feed/user/{user_id}/?count=12"
-            feed_resp = s.get(feed_url, headers=headers, timeout=30)
+            feed_resp = s.get(
+                f"https://www.instagram.com/api/v1/feed/user/{user_id}/?count=12",
+                headers=headers, timeout=30
+            )
             if feed_resp.status_code == 200:
                 items       = feed_resp.json().get("items", [])
-                curtidas    = sum(item.get("like_count",    0) for item in items)
-                comentarios = sum(item.get("comment_count", 0) for item in items)
+                curtidas    = sum(i.get("like_count",    0) for i in items)
+                comentarios = sum(i.get("comment_count", 0) for i in items)
                 amostras    = len(items)
                 for item in items[:3]:
-                    candidates = item.get("image_versions2", {}).get("candidates", [])
-                    thumb = candidates[len(candidates) // 2]["url"] if candidates else ""
+                    cands = item.get("image_versions2", {}).get("candidates", [])
+                    thumb = cands[len(cands) // 2]["url"] if cands else ""
                     recent_posts.append({
                         "thumb":     thumb,
                         "likes":     item.get("like_count",    0),
                         "comments":  item.get("comment_count", 0),
                         "shortcode": item.get("code",          ""),
                     })
-                print(f"   📸 Feed endpoint: {amostras} posts, {curtidas:,} curtidas, {comentarios:,} coment.")
+                print(f"   📸 Feed HTTP: {amostras} posts")
         except Exception as e_feed:
             print(f"   ⚠️  Feed endpoint: {e_feed}")
 
