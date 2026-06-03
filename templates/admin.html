@@ -344,6 +344,32 @@
     [data-theme="light"] .btn-pdf { background: rgba(139,92,246,0.07); border-color: rgba(139,92,246,0.2); color: #7c3aed; }
     [data-theme="light"] .btn-pdf:hover { background: rgba(139,92,246,0.14); }
 
+    /* ── Últimas Publicações (modal) ── */
+    .recent-posts-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .post-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden;
+      text-decoration: none; color: var(--text);
+      transition: transform 0.15s, border-color 0.2s;
+      display: block; position: relative;
+    }
+    .post-card:hover { transform: translateY(-2px); border-color: rgba(139,92,246,0.35); }
+    .post-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(139,92,246,0.6), transparent);
+      opacity: 0; transition: opacity 0.2s; z-index: 1;
+    }
+    .post-card:hover::before { opacity: 1; }
+    .post-thumb { width: 100%; aspect-ratio: 1; overflow: hidden; background: var(--card2); }
+    .post-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+    .post-card:hover .post-thumb img { transform: scale(1.04); }
+    .post-no-img { width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 28px; background: var(--card2); }
+    .post-stats { display: flex; gap: 8px; justify-content: center; padding: 8px 6px 10px; }
+    .post-stat { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 3px; }
+    [data-theme="light"] .post-card { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+
     .wa-btn {
       position: fixed; bottom: 24px; right: 24px; z-index: 999;
       width: 54px; height: 54px; border-radius: 50%;
@@ -465,6 +491,9 @@
           <div class="loading"><div class="spinner"></div><p>Carregando…</p></div>
         </div>
       </div>
+
+      <div class="modal-section-label" id="modal-posts-label" style="display:none">Últimas Publicações</div>
+      <div class="recent-posts-grid" id="modal-posts-grid" style="display:none;margin-bottom:4px"></div>
 
       <div class="modal-section-label">Análise de Engajamento</div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Sugestões personalizadas com base no histórico de crescimento</p>
@@ -872,6 +901,31 @@
 
         gerarAnalise(d);
         document.getElementById('modal-btn-pdf').style.display = 'flex';
+
+        // Últimas publicações
+        const rp = d.recent_posts || [];
+        const mpGrid  = document.getElementById('modal-posts-grid');
+        const mpLabel = document.getElementById('modal-posts-label');
+        if (rp.length > 0) {
+          mpGrid.innerHTML = rp.map(p => {
+            const link = p.shortcode ? `https://www.instagram.com/p/${p.shortcode}/` : '#';
+            const thumbHtml = p.thumb
+              ? `<div class="post-thumb"><img src="${p.thumb}" alt="Post" loading="lazy" onerror="this.parentElement.innerHTML='<div class=post-no-img>📸</div>'"></div>`
+              : `<div class="post-no-img">📸</div>`;
+            return `<a class="post-card" href="${link}" target="_blank" rel="noopener">
+              ${thumbHtml}
+              <div class="post-stats">
+                <span class="post-stat">❤️ ${fmt(p.likes)}</span>
+                <span class="post-stat">💬 ${fmt(p.comments)}</span>
+              </div>
+            </a>`;
+          }).join('');
+          mpLabel.style.display = 'block';
+          mpGrid.style.display  = 'grid';
+        } else {
+          mpLabel.style.display = 'none';
+          mpGrid.style.display  = 'none';
+        }
 
       } catch (err) {
         document.getElementById('modal-chart-wrap').innerHTML =

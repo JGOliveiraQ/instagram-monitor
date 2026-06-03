@@ -60,6 +60,24 @@ except Exception as e:
     print(f"❌ Erro ao conectar ao Google Sheets: {e}")
     sys.exit(1)
 
+# ── Aba Posts (últimas publicações) ─────────────────────────────────────────
+posts_sheet = None
+try:
+    posts_sheet = gs_client.open("Instagram Monitor").worksheet("Posts")
+    print("✅ Aba Posts encontrada")
+except Exception:
+    try:
+        posts_sheet = gs_client.open("Instagram Monitor").add_worksheet("Posts", 2000, 14)
+        posts_sheet.insert_row([
+            "Data", "Cliente",
+            "Thumb1", "Likes1", "Coments1", "Shortcode1",
+            "Thumb2", "Likes2", "Coments2", "Shortcode2",
+            "Thumb3", "Likes3", "Coments3", "Shortcode3",
+        ], 1)
+        print("✅ Aba Posts criada")
+    except Exception as e_ps:
+        print(f"⚠️  Aba Posts: {e_ps}")
+
 headers = sheet.row_values(1)
 expected = ["Data", "Cliente", "Seguidores", "Posts", "Curtidas", "Comentarios"]
 if not headers:
@@ -152,17 +170,54 @@ def get_profile_data(username: str, cookies=None) -> dict:
     }
     resp = s.get(url, headers=headers, timeout=30)
     resp.raise_for_status()
-    user = resp.json()["data"]["user"]
-    # Curtidas: soma as curtidas dos posts recentes já retornados (sem req extra)
-    edges = user.get("edge_owner_to_timeline_media", {}).get("edges", [])
-    curtidas    = sum(e.get("node", {}).get("edge_liked_by",          {}).get("count", 0) for e in edges)
-    comentarios = sum(e.get("node", {}).get("edge_media_to_comment",  {}).get("count", 0) for e in edges)
+    user        = resp.json()["data"]["user"]
+    user_id     = user.get("id", "")
+
+    # Tentativa 1: edges da resposta principal
+    edges       = user.get("edge_owner_to_timeline_media", {}).get("edges", [])
+    curtidas    = sum(e.get("node", {}).get("edge_liked_by",         {}).get("count", 0) for e in edges)
+    comentarios = sum(e.get("node", {}).get("edge_media_to_comment", {}).get("count", 0) for e in edges)
+    amostras    = len(edges)
+    recent_posts = []
+    for e in edges[:3]:
+        node = e.get("node", {})
+        recent_posts.append({
+            "thumb":     node.get("thumbnail_src") or node.get("display_url", ""),
+            "likes":     node.get("edge_liked_by",         {}).get("count", 0),
+            "comments":  node.get("edge_media_to_comment", {}).get("count", 0),
+            "shortcode": node.get("shortcode", ""),
+        })
+
+    # Tentativa 2: endpoint /feed/user/{id}/ (fallback quando edges vazio)
+    if amostras == 0 and user_id:
+        try:
+            feed_url  = f"https://www.instagram.com/api/v1/feed/user/{user_id}/?count=12"
+            feed_resp = s.get(feed_url, headers=headers, timeout=30)
+            if feed_resp.status_code == 200:
+                items       = feed_resp.json().get("items", [])
+                curtidas    = sum(item.get("like_count",    0) for item in items)
+                comentarios = sum(item.get("comment_count", 0) for item in items)
+                amostras    = len(items)
+                for item in items[:3]:
+                    candidates = item.get("image_versions2", {}).get("candidates", [])
+                    thumb = candidates[len(candidates) // 2]["url"] if candidates else ""
+                    recent_posts.append({
+                        "thumb":     thumb,
+                        "likes":     item.get("like_count",    0),
+                        "comments":  item.get("comment_count", 0),
+                        "shortcode": item.get("code",          ""),
+                    })
+                print(f"   📸 Feed endpoint: {amostras} posts, {curtidas:,} curtidas, {comentarios:,} coment.")
+        except Exception as e_feed:
+            print(f"   ⚠️  Feed endpoint: {e_feed}")
+
     return {
-        "followers":   user["edge_followed_by"]["count"],
-        "posts":       user["edge_owner_to_timeline_media"]["count"],
-        "curtidas":    curtidas,
-        "comentarios": comentarios,
-        "amostras":    len(edges),
+        "followers":    user["edge_followed_by"]["count"],
+        "posts":        user["edge_owner_to_timeline_media"]["count"],
+        "curtidas":     curtidas,
+        "comentarios":  comentarios,
+        "amostras":     amostras,
+        "recent_posts": recent_posts,
     }
 
 
@@ -190,17 +245,31 @@ for usuario in CLIENTES:
     for tentativa in range(1, 21):         # até 20 tentativas por conta
         try:
             print(f"Buscando @{usuario}{'  (tentativa ' + str(tentativa) + ')' if tentativa > 1 else ''}...")
-            dados       = get_profile_data(usuario, session_cookies)
-            seguidores  = dados["followers"]
-            posts       = dados["posts"]
-            curtidas    = dados["curtidas"]
-            comentarios = dados["comentarios"]
-            amostras    = dados["amostras"]
+            dados        = get_profile_data(usuario, session_cookies)
+            seguidores   = dados["followers"]
+            posts        = dados["posts"]
+            curtidas     = dados["curtidas"]
+            comentarios  = dados["comentarios"]
+            amostras     = dados["amostras"]
+            recent_posts = dados.get("recent_posts", [])
 
             sheet.append_row([hoje, usuario, seguidores, posts, curtidas, comentarios])
             registros_existentes.add((hoje, usuario))
             print(f"✅ @{usuario} — {seguidores:,} seg | {posts} posts | "
                   f"{curtidas:,} curtidas | {comentarios:,} comentários ({amostras} amostras)")
+
+            # Salva últimas 3 publicações na aba Posts
+            if posts_sheet is not None:
+                rp = list(recent_posts) + [{"thumb":"","likes":0,"comments":0,"shortcode":""}] * 3
+                row = [hoje, usuario]
+                for p in rp[:3]:
+                    row.extend([p.get("thumb",""), p.get("likes",0),
+                                 p.get("comments",0), p.get("shortcode","")])
+                try:
+                    posts_sheet.append_row(row)
+                except Exception as e_ps:
+                    print(f"   ⚠️  Posts sheet: {e_ps}")
+
             sucesso = True
             break
 

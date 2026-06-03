@@ -123,6 +123,7 @@ def get_sheet():
 
 # Cache de registros da planilha (evita múltiplas conexões simultâneas)
 _records_cache: dict = {"data": None, "ts": None}
+_posts_cache:   dict = {"data": None, "ts": None}
 _CACHE_TTL = timedelta(minutes=5)
 
 
@@ -138,7 +139,56 @@ def get_cached_records():
     return records
 
 
-def _build_stats(username, records):
+def get_cached_posts_records():
+    """Retorna registros da aba Posts (últimas publicações), cache 5 min."""
+    now = datetime.now()
+    if _posts_cache["data"] is not None and _posts_cache["ts"] and \
+            (now - _posts_cache["ts"]) < _CACHE_TTL:
+        return _posts_cache["data"]
+    try:
+        creds_json = os.getenv("GOOGLE_CREDENTIALS")
+        if creds_json:
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(
+                json.loads(creds_json), SCOPE)
+        else:
+            creds = ServiceAccountCredentials.from_json_keyfile_name(
+                os.path.join(BASE_DIR, "credentials.json"), SCOPE)
+        gc = gspread.authorize(creds)
+        ws = gc.open("Instagram Monitor").worksheet("Posts")
+        records = ws.get_all_records()
+        _posts_cache["data"] = records
+        _posts_cache["ts"] = now
+        return records
+    except Exception:
+        _posts_cache["data"] = []
+        _posts_cache["ts"] = now
+        return []
+
+
+def _get_recent_posts(instagram_username, posts_records):
+    """Retorna as 3 últimas publicações do usuário a partir da aba Posts."""
+    rows = [r for r in posts_records
+            if str(r.get("Cliente", "")).strip().lower() == instagram_username.lower()]
+    if not rows:
+        return []
+    latest = rows[-1]
+    result = []
+    for i in range(1, 4):
+        thumb     = str(latest.get(f"Thumb{i}",     "") or "")
+        likes     = int(latest.get(f"Likes{i}",     0)  or 0)
+        comments  = int(latest.get(f"Coments{i}",   0)  or 0)
+        shortcode = str(latest.get(f"Shortcode{i}", "") or "")
+        if thumb or likes or comments:
+            result.append({
+                "thumb":     thumb,
+                "likes":     likes,
+                "comments":  comments,
+                "shortcode": shortcode,
+            })
+    return result
+
+
+def _build_stats(username, records, posts_records=None):
     """Monta o dict de stats para um username a partir dos records já carregados."""
     rows = [
         r for r in records
@@ -174,6 +224,8 @@ def _build_stats(username, records):
     avg_curtidas    = round(cur_curtidas    / amostras_ref, 1) if amostras_ref else 0
     avg_comentarios = round(cur_comentarios / amostras_ref, 1) if amostras_ref else 0
 
+    recent_posts = _get_recent_posts(username, posts_records or [])
+
     return {
         "has_data":           True,
         "dates":              dates,
@@ -197,6 +249,7 @@ def _build_stats(username, records):
         "monthly_likes":      monthly_l,
         "weekly_comments":    weekly_c,
         "monthly_comments":   monthly_c,
+        "recent_posts":       recent_posts,
     }
 
 
@@ -368,10 +421,10 @@ def get_stats(username):
     if not USERS.get(current_user, {}).get("is_admin") and current_user != username:
         return jsonify({"error": "Acesso negado"}), 403
     try:
-        records = get_cached_records()
-        # Usa o @ do Instagram real do usuário para buscar no Sheets
+        records       = get_cached_records()
+        posts_records = get_cached_posts_records()
         insta = USERS.get(username, {}).get("instagram", username)
-        return jsonify(_build_stats(insta, records))
+        return jsonify(_build_stats(insta, records, posts_records))
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
 
@@ -381,13 +434,14 @@ def get_stats(username):
 def get_all_stats():
     """Retorna stats de todos os clientes em uma única chamada ao Sheets."""
     try:
-        records = get_cached_records()
+        records       = get_cached_records()
+        posts_records = get_cached_posts_records()
         result = {}
         for uid, udata in USERS.items():
             if udata.get("is_admin"):
                 continue
             insta = udata.get("instagram", uid)
-            result[uid] = _build_stats(insta, records)
+            result[uid] = _build_stats(insta, records, posts_records)
         return jsonify(result)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
