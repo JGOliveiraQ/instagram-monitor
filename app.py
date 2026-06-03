@@ -394,16 +394,32 @@ def dashboard():
     username = session["user"]
     if USERS.get(username, {}).get("is_admin"):
         return redirect(url_for("admin"))
+    # Verifica se é o admin logado como cliente (via Referer ou flag de sessão)
+    is_impersonating = session.get("_impersonating", False)
     return render_template(
         "dashboard.html",
         username=username,
         display=USERS[username]["display"],
+        is_impersonating=is_impersonating,
     )
+
+
+@app.route("/admin/login-as/<username>")
+@admin_required
+def login_as(username):
+    """Admin entra como qualquer cliente sem precisar sair e fazer login manual."""
+    if username not in USERS or USERS[username].get("is_admin"):
+        return redirect(url_for("admin"))
+    session["user"] = username
+    session["_impersonating"] = True
+    return redirect(url_for("dashboard"))
 
 
 @app.route("/admin")
 @admin_required
 def admin():
+    session.pop("_impersonating", None)
+    session["user"] = "admin"
     clients = [
         {"id": k, "display": v["display"]}
         for k, v in USERS.items()
