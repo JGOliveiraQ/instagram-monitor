@@ -197,11 +197,11 @@ def _build_stats(username, records, posts_records=None):
     if not rows:
         return {"has_data": False}
 
-    dates       = [str(r.get("Data", ""))        for r in rows]
-    followers   = [int(r.get("Seguidores", 0))  for r in rows]
-    posts       = [int(r.get("Posts", 0))        for r in rows]
-    curtidas    = [int(r.get("Curtidas", 0))     for r in rows]
-    comentarios = [int(r.get("Comentarios", 0)) for r in rows]
+    dates       = [str(r.get("Data", ""))                  for r in rows]
+    followers   = [int(r.get("Seguidores",  0) or 0)  for r in rows]
+    posts       = [int(r.get("Posts",       0) or 0)  for r in rows]
+    curtidas    = [int(r.get("Curtidas",    0) or 0)  for r in rows]
+    comentarios = [int(r.get("Comentarios", 0) or 0)  for r in rows]
 
     first       = followers[0]
     current_val = followers[-1]
