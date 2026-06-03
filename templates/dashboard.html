@@ -154,10 +154,26 @@
       padding: 22px 22px 18px;
       margin-top: 24px;
     }
-    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 8px; }
     .chart-header h2 { font-size: 15px; font-weight: 600; }
     .range-badge { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.04); padding: 4px 10px; border-radius: 6px; }
     .chart-wrap { position: relative; height: 260px; }
+
+    /* ── Chart tabs ── */
+    .chart-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+    .chart-tab {
+      font-size: 11px; font-weight: 500;
+      padding: 4px 11px; border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .chart-tab:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .chart-tab.active { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #c4b5fd; }
+    [data-theme="light"] .chart-tab { color: #64748b; }
+    [data-theme="light"] .chart-tab:hover { background: rgba(0,0,0,0.04); color: #0f172a; }
+    [data-theme="light"] .chart-tab.active { background: rgba(139,92,246,0.09); border-color: rgba(139,92,246,0.3); color: #7c3aed; }
 
     /* ── States ── */
     .loading, .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
@@ -424,6 +440,20 @@
       </div>
 
       <div class="stat-card">
+        <div class="sc-top"><div class="sc-icon ic-green">💎</div></div>
+        <div class="sc-value" id="v-eng-total">—</div>
+        <div class="sc-label">Total de Engajamento</div>
+        <div class="sc-sub">curtidas + comentários</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="sc-top"><div class="sc-icon ic-purple">📊</div></div>
+        <div class="sc-value" id="v-eng-rate" style="font-size:20px">—</div>
+        <div class="sc-label">Taxa de Engajamento</div>
+        <div class="sc-sub">engajamento / seguidores</div>
+      </div>
+
+      <div class="stat-card">
         <div class="sc-top">
           <div class="sc-icon ic-green">📊</div>
           <span class="trend-pill trend-flat" id="trend-week-c">—</span>
@@ -447,7 +477,12 @@
     <!-- Chart -->
     <div class="chart-card">
       <div class="chart-header">
-        <h2>Seguidores &amp; Publicações</h2>
+        <h2>Histórico</h2>
+        <div class="chart-tabs">
+          <button class="chart-tab active" id="tab-followers" onclick="switchChart('followers')">👥 Seguidores</button>
+          <button class="chart-tab" id="tab-engagement" onclick="switchChart('engagement')">❤️ Curtidas</button>
+          <button class="chart-tab" id="tab-rate" onclick="switchChart('rate')">📊 Engajamento %</button>
+        </div>
         <span class="range-badge" id="range-badge">carregando…</span>
       </div>
       <div class="chart-wrap" id="chart-wrap">
@@ -547,6 +582,131 @@
 
     let _pdfData = null;
     let _pdfChart = null;
+    let _chartInstance = null;
+    let _activeChart = 'followers';
+
+    function renderChart(type, data) {
+      _activeChart = type;
+      ['followers','engagement','rate'].forEach(t => {
+        const el = document.getElementById('tab-' + t);
+        if (el) el.className = 'chart-tab' + (t === type ? ' active' : '');
+      });
+
+      const wrap = document.getElementById('chart-wrap');
+      wrap.innerHTML = '<canvas id="chart"></canvas>';
+      const ctx = document.getElementById('chart').getContext('2d');
+      if (_chartInstance) { _chartInstance.destroy(); _chartInstance = null; }
+      const cc = chartColors();
+
+      if (type === 'followers') {
+        const grad = ctx.createLinearGradient(0, 0, 0, 260);
+        grad.addColorStop(0, 'rgba(139,92,246,0.3)');
+        grad.addColorStop(1, 'rgba(139,92,246,0.0)');
+        _chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.dates,
+            datasets: [
+              { label:'Seguidores', data:data.followers, borderColor:'#8b5cf6', borderWidth:2, backgroundColor:grad,
+                pointBackgroundColor:'#8b5cf6', pointRadius:data.followers.length>30?0:3, pointHoverRadius:5,
+                tension:0.4, fill:true, yAxisID:'y' },
+              { label:'Publicações', data:data.posts, borderColor:'#06b6d4', borderWidth:2, backgroundColor:'transparent',
+                pointBackgroundColor:'#06b6d4', pointRadius:data.posts.length>30?0:3, pointHoverRadius:5,
+                tension:0.4, fill:false, yAxisID:'y1' }
+            ]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins: {
+              legend:{ display:true, labels:{ color:cc.ticks, usePointStyle:true, pointStyle:'circle', font:{size:11}, padding:16 } },
+              tooltip:{ backgroundColor:'#1a1a1a', borderColor:'rgba(139,92,246,0.4)', borderWidth:1,
+                titleColor:'#64748b', bodyColor:'#f1f5f9', bodyFont:{size:13,weight:'600'}, padding:12,
+                callbacks:{ label: c => c.datasetIndex===0 ? ' '+fmt(c.parsed.y)+' seguidores' : ' '+fmt(c.parsed.y)+' posts' } }
+            },
+            scales: {
+              x:{ grid:{color:cc.grid}, ticks:{color:cc.ticks,font:{size:11},maxTicksLimit:8} },
+              y:{ position:'left', grid:{color:cc.grid}, ticks:{color:'#a78bfa',font:{size:11},callback:v=>fmt(v)} },
+              y1:{ position:'right', grid:{drawOnChartArea:false}, ticks:{color:'#22d3ee',font:{size:11},callback:v=>fmt(v)} }
+            }
+          }
+        });
+        _pdfChart = _chartInstance;
+
+      } else if (type === 'engagement') {
+        const gradL = ctx.createLinearGradient(0, 0, 0, 260);
+        gradL.addColorStop(0, 'rgba(236,72,153,0.28)');
+        gradL.addColorStop(1, 'rgba(236,72,153,0.0)');
+        _chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.dates,
+            datasets: [
+              { label:'Curtidas', data:data.curtidas, borderColor:'#ec4899', borderWidth:2, backgroundColor:gradL,
+                pointBackgroundColor:'#ec4899', pointRadius:data.curtidas.length>30?0:3, pointHoverRadius:5,
+                tension:0.4, fill:true, yAxisID:'y' },
+              { label:'Comentários', data:data.comentarios, borderColor:'#f59e0b', borderWidth:2, backgroundColor:'transparent',
+                pointBackgroundColor:'#f59e0b', pointRadius:data.comentarios.length>30?0:3, pointHoverRadius:5,
+                tension:0.4, fill:false, yAxisID:'y1' }
+            ]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins: {
+              legend:{ display:true, labels:{ color:cc.ticks, usePointStyle:true, pointStyle:'circle', font:{size:11}, padding:16 } },
+              tooltip:{ backgroundColor:'#1a1a1a', borderColor:'rgba(236,72,153,0.4)', borderWidth:1,
+                titleColor:'#64748b', bodyColor:'#f1f5f9', bodyFont:{size:13,weight:'600'}, padding:12,
+                callbacks:{ label: c => c.datasetIndex===0 ? ' '+fmt(c.parsed.y)+' curtidas' : ' '+fmt(c.parsed.y)+' comentários' } }
+            },
+            scales: {
+              x:{ grid:{color:cc.grid}, ticks:{color:cc.ticks,font:{size:11},maxTicksLimit:8} },
+              y:{ position:'left', grid:{color:cc.grid}, ticks:{color:'#f472b6',font:{size:11},callback:v=>fmt(v)} },
+              y1:{ position:'right', grid:{drawOnChartArea:false}, ticks:{color:'#fbbf24',font:{size:11},callback:v=>fmt(v)} }
+            }
+          }
+        });
+
+      } else if (type === 'rate') {
+        const engRate = data.followers.map((f,i) => {
+          const eng = (data.curtidas[i]||0) + (data.comentarios[i]||0);
+          return f > 0 ? parseFloat((eng/f*100).toFixed(4)) : 0;
+        });
+        const gradR = ctx.createLinearGradient(0, 0, 0, 260);
+        gradR.addColorStop(0, 'rgba(99,102,241,0.3)');
+        gradR.addColorStop(1, 'rgba(99,102,241,0.0)');
+        _chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.dates,
+            datasets: [{
+              label:'Engajamento %', data:engRate,
+              borderColor:'#6366f1', borderWidth:2, backgroundColor:gradR,
+              pointBackgroundColor:'#6366f1', pointRadius:engRate.length>30?0:3, pointHoverRadius:5,
+              tension:0.4, fill:true
+            }]
+          },
+          options: {
+            responsive:true, maintainAspectRatio:false,
+            interaction:{ mode:'index', intersect:false },
+            plugins: {
+              legend:{ display:true, labels:{ color:cc.ticks, usePointStyle:true, pointStyle:'circle', font:{size:11}, padding:16 } },
+              tooltip:{ backgroundColor:'#1a1a1a', borderColor:'rgba(99,102,241,0.4)', borderWidth:1,
+                titleColor:'#64748b', bodyColor:'#f1f5f9', bodyFont:{size:13,weight:'600'}, padding:12,
+                callbacks:{ label: c => ' '+c.parsed.y.toFixed(3)+'%' } }
+            },
+            scales: {
+              x:{ grid:{color:cc.grid}, ticks:{color:cc.ticks,font:{size:11},maxTicksLimit:8} },
+              y:{ position:'left', grid:{color:cc.grid}, ticks:{color:'#818cf8',font:{size:11},callback:v=>v.toFixed(2)+'%'} }
+            }
+          }
+        });
+      }
+    }
+
+    function switchChart(type) {
+      if (_pdfData) renderChart(type, _pdfData);
+    }
 
     async function loadData() {
       try {
@@ -626,87 +786,19 @@
         document.getElementById('range-badge').textContent =
           d[0] === d[d.length-1] ? d[0] : d[0] + ' → ' + d[d.length-1];
 
-        // Chart
-        const wrap = document.getElementById('chart-wrap');
-        wrap.innerHTML = '<canvas id="chart"></canvas>';
-        const ctx = document.getElementById('chart').getContext('2d');
-        const grad = ctx.createLinearGradient(0, 0, 0, 260);
-        grad.addColorStop(0, 'rgba(139,92,246,0.3)');
-        grad.addColorStop(1, 'rgba(139,92,246,0.0)');
-
-        const grad2 = ctx.createLinearGradient(0, 0, 0, 260);
-        grad2.addColorStop(0, 'rgba(6,182,212,0.12)');
-        grad2.addColorStop(1, 'rgba(6,182,212,0.0)');
-
-        _pdfChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.dates,
-            datasets: [
-              {
-                label: 'Seguidores',
-                data: data.followers,
-                borderColor: '#8b5cf6', borderWidth: 2,
-                backgroundColor: grad,
-                pointBackgroundColor: '#8b5cf6',
-                pointRadius: data.followers.length > 30 ? 0 : 3,
-                pointHoverRadius: 5,
-                tension: 0.4, fill: true, yAxisID: 'y',
-              },
-              {
-                label: 'Publicações',
-                data: data.posts,
-                borderColor: '#06b6d4', borderWidth: 2,
-                backgroundColor: 'transparent',
-                pointBackgroundColor: '#06b6d4',
-                pointRadius: data.posts.length > 30 ? 0 : 3,
-                pointHoverRadius: 5,
-                tension: 0.4, fill: false, yAxisID: 'y1',
-              }
-            ]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              legend: {
-                display: true,
-                labels: {
-                  color: chartColors().ticks,
-                  usePointStyle: true, pointStyle: 'circle',
-                  font: { size: 11 }, padding: 16,
-                }
-              },
-              tooltip: {
-                backgroundColor: '#1a1a1a',
-                borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1,
-                titleColor: '#64748b', bodyColor: '#f1f5f9',
-                bodyFont: { size: 13, weight: '600' }, padding: 12,
-                callbacks: {
-                  label: c => c.datasetIndex === 0
-                    ? ' ' + fmt(c.parsed.y) + ' seguidores'
-                    : ' ' + fmt(c.parsed.y) + ' posts'
-                }
-              }
-            },
-            scales: {
-              x: { grid: { color: chartColors().grid }, ticks: { color: chartColors().ticks, font: { size: 11 }, maxTicksLimit: 8 } },
-              y: {
-                position: 'left',
-                grid: { color: chartColors().grid },
-                ticks: { color: '#a78bfa', font: { size: 11 }, callback: v => fmt(v) },
-              },
-              y1: {
-                position: 'right',
-                grid: { drawOnChartArea: false },
-                ticks: { color: '#22d3ee', font: { size: 11 }, callback: v => fmt(v) },
-              }
-            }
-          }
-        });
+        // Engajamento total e taxa
+        const engTotal = (data.current_likes || 0) + (data.current_comments || 0);
+        const engRate  = data.current_followers > 0
+          ? ((engTotal / data.current_followers) * 100).toFixed(3) + '%'
+          : '—';
+        const etEl = document.getElementById('v-eng-total');
+        const erEl = document.getElementById('v-eng-rate');
+        if (etEl) etEl.textContent = fmt(engTotal);
+        if (erEl) erEl.textContent = engRate;
 
         _pdfData = data;
         document.getElementById('btn-pdf').style.display = 'inline-flex';
+        renderChart('followers', data);
         gerarAnalise(data);
 
       } catch (err) {
@@ -839,7 +931,7 @@
       const display = "{{ display }}";
       const dates = d.dates || [];
       const range = dates.length ? (dates[0] === dates[dates.length-1] ? dates[0] : dates[0] + ' → ' + dates[dates.length-1]) : '—';
-      const chartImg = _pdfChart ? _pdfChart.toBase64Image() : null;
+      const chartImg = (_activeChart === 'followers' && _chartInstance) ? _chartInstance.toBase64Image() : (_pdfChart ? _pdfChart.toBase64Image() : null);
       const today = new Date().toLocaleDateString('pt-BR');
 
       function pf(n) { n=Number(n); if(n>=1e6) return (n/1e6).toFixed(1).replace(/\.0$/,'')+'M'; if(n>=1e3) return (n/1e3).toFixed(1).replace(/\.0$/,'')+'K'; return n.toLocaleString('pt-BR'); }

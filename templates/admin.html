@@ -210,10 +210,26 @@
       padding: 18px 18px 14px;
       margin-top: 20px;
     }
-    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
     .chart-header h2 { font-size: 14px; font-weight: 600; }
     .range-badge { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.04); padding: 4px 10px; border-radius: 6px; }
     .chart-wrap { position: relative; height: 240px; }
+
+    /* ── Chart tabs ── */
+    .chart-tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+    .chart-tab {
+      font-size: 11px; font-weight: 500;
+      padding: 4px 11px; border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--muted);
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .chart-tab:hover { background: rgba(255,255,255,0.06); color: var(--text); }
+    .chart-tab.active { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #c4b5fd; }
+    [data-theme="light"] .chart-tab { color: #64748b; }
+    [data-theme="light"] .chart-tab:hover { background: rgba(0,0,0,0.04); color: #0f172a; }
+    [data-theme="light"] .chart-tab.active { background: rgba(139,92,246,0.09); border-color: rgba(139,92,246,0.3); color: #7c3aed; }
 
     /* ── Análise cards ── */
     .analise-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
@@ -432,9 +448,17 @@
       <div class="modal-section-label">Curtidas &amp; Comentários</div>
       <div class="stats-grid" id="modal-grid-l"></div>
 
+      <div class="modal-section-label">Engajamento</div>
+      <div class="stats-grid" id="modal-grid-eng"></div>
+
       <div class="chart-card">
         <div class="chart-header">
-          <h2>Seguidores &amp; Publicações</h2>
+          <h2>Histórico</h2>
+          <div class="chart-tabs">
+            <button class="chart-tab active" id="mtab-followers" onclick="switchModalChart('followers')">👥 Seguidores</button>
+            <button class="chart-tab" id="mtab-engagement" onclick="switchModalChart('engagement')">❤️ Curtidas</button>
+            <button class="chart-tab" id="mtab-rate" onclick="switchModalChart('rate')">📊 Engajamento %</button>
+          </div>
           <span class="range-badge" id="modal-chart-range">—</span>
         </div>
         <div class="chart-wrap" id="modal-chart-wrap">
@@ -496,9 +520,104 @@
     // ── Admin ────────────────────────────────
     const CLIENTS = {{ clients | tojson }};
     let chartInst = null;
+    let _activeModalChart = 'followers';
+    let _currentModalData = null;
     const cache = {};
     let currentClientId = null;
     let currentClientDisplay = null;
+
+    function renderModalChart(type, data) {
+      _activeModalChart = type;
+      ['followers','engagement','rate'].forEach(t => {
+        const el = document.getElementById('mtab-' + t);
+        if (el) el.className = 'chart-tab' + (t === type ? ' active' : '');
+      });
+
+      document.getElementById('modal-chart-wrap').innerHTML = '<canvas id="modal-chart"></canvas>';
+      const ctx = document.getElementById('modal-chart').getContext('2d');
+      if (chartInst) { chartInst.destroy(); chartInst = null; }
+      const cc = chartColors();
+
+      if (type === 'followers') {
+        const grad = ctx.createLinearGradient(0, 0, 0, 240);
+        grad.addColorStop(0, 'rgba(139,92,246,0.3)');
+        grad.addColorStop(1, 'rgba(139,92,246,0.0)');
+        chartInst = new Chart(ctx, {
+          type:'line', data:{ labels:data.dates, datasets:[
+            { label:'Seguidores', data:data.followers, borderColor:'#8b5cf6', borderWidth:2, backgroundColor:grad,
+              pointBackgroundColor:'#8b5cf6', pointRadius:data.followers.length>30?0:3, pointHoverRadius:5,
+              tension:0.4, fill:true, yAxisID:'y' },
+            { label:'Publicações', data:data.posts, borderColor:'#06b6d4', borderWidth:2, backgroundColor:'transparent',
+              pointBackgroundColor:'#06b6d4', pointRadius:data.posts.length>30?0:3, pointHoverRadius:5,
+              tension:0.4, fill:false, yAxisID:'y1' }
+          ]},
+          options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+            plugins:{ legend:{display:true,labels:{color:cc.ticks,usePointStyle:true,pointStyle:'circle',font:{size:11},padding:14}},
+              tooltip:{backgroundColor:'#1a1a1a',borderColor:'rgba(139,92,246,0.4)',borderWidth:1,
+                titleColor:'#64748b',bodyColor:'#f1f5f9',bodyFont:{size:13,weight:'600'},padding:12,
+                callbacks:{label:c=>c.datasetIndex===0?' '+fmt(c.parsed.y)+' seguidores':' '+fmt(c.parsed.y)+' posts'}} },
+            scales:{
+              x:{grid:{color:cc.grid},ticks:{color:cc.ticks,font:{size:11},maxTicksLimit:8}},
+              y:{position:'left',grid:{color:cc.grid},ticks:{color:'#a78bfa',font:{size:11},callback:v=>fmt(v)}},
+              y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#22d3ee',font:{size:11},callback:v=>fmt(v)}}
+            }}
+        });
+
+      } else if (type === 'engagement') {
+        const gradL = ctx.createLinearGradient(0, 0, 0, 240);
+        gradL.addColorStop(0, 'rgba(236,72,153,0.28)');
+        gradL.addColorStop(1, 'rgba(236,72,153,0.0)');
+        chartInst = new Chart(ctx, {
+          type:'line', data:{ labels:data.dates, datasets:[
+            { label:'Curtidas', data:data.curtidas, borderColor:'#ec4899', borderWidth:2, backgroundColor:gradL,
+              pointBackgroundColor:'#ec4899', pointRadius:data.curtidas.length>30?0:3, pointHoverRadius:5,
+              tension:0.4, fill:true, yAxisID:'y' },
+            { label:'Comentários', data:data.comentarios, borderColor:'#f59e0b', borderWidth:2, backgroundColor:'transparent',
+              pointBackgroundColor:'#f59e0b', pointRadius:data.comentarios.length>30?0:3, pointHoverRadius:5,
+              tension:0.4, fill:false, yAxisID:'y1' }
+          ]},
+          options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+            plugins:{ legend:{display:true,labels:{color:cc.ticks,usePointStyle:true,pointStyle:'circle',font:{size:11},padding:14}},
+              tooltip:{backgroundColor:'#1a1a1a',borderColor:'rgba(236,72,153,0.4)',borderWidth:1,
+                titleColor:'#64748b',bodyColor:'#f1f5f9',bodyFont:{size:13,weight:'600'},padding:12,
+                callbacks:{label:c=>c.datasetIndex===0?' '+fmt(c.parsed.y)+' curtidas':' '+fmt(c.parsed.y)+' comentários'}} },
+            scales:{
+              x:{grid:{color:cc.grid},ticks:{color:cc.ticks,font:{size:11},maxTicksLimit:8}},
+              y:{position:'left',grid:{color:cc.grid},ticks:{color:'#f472b6',font:{size:11},callback:v=>fmt(v)}},
+              y1:{position:'right',grid:{drawOnChartArea:false},ticks:{color:'#fbbf24',font:{size:11},callback:v=>fmt(v)}}
+            }}
+        });
+
+      } else if (type === 'rate') {
+        const engRate = data.followers.map((f,i) => {
+          const eng = (data.curtidas[i]||0) + (data.comentarios[i]||0);
+          return f > 0 ? parseFloat((eng/f*100).toFixed(4)) : 0;
+        });
+        const gradR = ctx.createLinearGradient(0, 0, 0, 240);
+        gradR.addColorStop(0, 'rgba(99,102,241,0.3)');
+        gradR.addColorStop(1, 'rgba(99,102,241,0.0)');
+        chartInst = new Chart(ctx, {
+          type:'line', data:{ labels:data.dates, datasets:[
+            { label:'Engajamento %', data:engRate, borderColor:'#6366f1', borderWidth:2, backgroundColor:gradR,
+              pointBackgroundColor:'#6366f1', pointRadius:engRate.length>30?0:3, pointHoverRadius:5,
+              tension:0.4, fill:true }
+          ]},
+          options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+            plugins:{ legend:{display:true,labels:{color:cc.ticks,usePointStyle:true,pointStyle:'circle',font:{size:11},padding:14}},
+              tooltip:{backgroundColor:'#1a1a1a',borderColor:'rgba(99,102,241,0.4)',borderWidth:1,
+                titleColor:'#64748b',bodyColor:'#f1f5f9',bodyFont:{size:13,weight:'600'},padding:12,
+                callbacks:{label:c=>' '+c.parsed.y.toFixed(3)+'%'}} },
+            scales:{
+              x:{grid:{color:cc.grid},ticks:{color:cc.ticks,font:{size:11},maxTicksLimit:8}},
+              y:{position:'left',grid:{color:cc.grid},ticks:{color:'#818cf8',font:{size:11},callback:v=>v.toFixed(2)+'%'}}
+            }}
+        });
+      }
+    }
+
+    function switchModalChart(type) {
+      if (_currentModalData) renderModalChart(type, _currentModalData);
+    }
 
     function fmt(n) {
       n = Number(n);
@@ -552,6 +671,26 @@
           <div class="sc-value ${Number(d.growth_absolute)>=0?'pos':'neg'}">${fmtSigned(d.growth_absolute)}</div>
           <div class="sc-label">Crescimento total</div>
           <div class="sc-sub">desde ${d.dates[0]}</div>
+        </div>`;
+    }
+
+    function buildEngagementCards(d) {
+      const engTotal = (d.current_likes || 0) + (d.current_comments || 0);
+      const engRate  = d.current_followers > 0
+        ? ((engTotal / d.current_followers) * 100).toFixed(3) + '%'
+        : '—';
+      return `
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-green">💎</div></div>
+          <div class="sc-value">${fmt(engTotal)}</div>
+          <div class="sc-label">Total de Engajamento</div>
+          <div class="sc-sub">curtidas + comentários</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-top"><div class="sc-icon ic-purple">📊</div></div>
+          <div class="sc-value" style="font-size:18px">${engRate}</div>
+          <div class="sc-label">Taxa de Engajamento</div>
+          <div class="sc-sub">engajamento / seguidores</div>
         </div>`;
     }
 
@@ -675,6 +814,8 @@
       if (chartInst) { chartInst.destroy(); chartInst = null; }
       currentClientId = null;
       currentClientDisplay = null;
+      _currentModalData = null;
+      _activeModalChart = 'followers';
     }
     function handleOverlayClick(e) {
       if (e.target === document.getElementById('modal-overlay')) closeModal();
@@ -693,6 +834,7 @@
       document.getElementById('modal-grid-f').innerHTML = loadingCards(4);
       document.getElementById('modal-grid-p').innerHTML = loadingCards(3);
       document.getElementById('modal-grid-l').innerHTML = loadingCards(8);
+      document.getElementById('modal-grid-eng').innerHTML = loadingCards(2);
       document.getElementById('modal-chart-wrap').innerHTML =
         '<div class="loading"><div class="spinner"></div><p>Carregando…</p></div>';
       document.getElementById('modal-analise-grid').innerHTML = '';
@@ -721,82 +863,12 @@
         document.getElementById('modal-grid-f').innerHTML = buildFollowerCards(d);
         document.getElementById('modal-grid-p').innerHTML = buildPostCards(d);
         document.getElementById('modal-grid-l').innerHTML = buildLikesCards(d);
+        document.getElementById('modal-grid-eng').innerHTML = buildEngagementCards(d);
 
-        // Dual-line chart
-        document.getElementById('modal-chart-wrap').innerHTML = '<canvas id="modal-chart"></canvas>';
-        const ctx = document.getElementById('modal-chart').getContext('2d');
-        if (chartInst) chartInst.destroy();
-
-        const grad = ctx.createLinearGradient(0, 0, 0, 240);
-        grad.addColorStop(0, 'rgba(139,92,246,0.3)');
-        grad.addColorStop(1, 'rgba(139,92,246,0.0)');
-
-        chartInst = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: d.dates,
-            datasets: [
-              {
-                label: 'Seguidores',
-                data: d.followers,
-                borderColor: '#8b5cf6', borderWidth: 2,
-                backgroundColor: grad,
-                pointBackgroundColor: '#8b5cf6',
-                pointRadius: d.followers.length > 30 ? 0 : 3,
-                pointHoverRadius: 5,
-                tension: 0.4, fill: true, yAxisID: 'y',
-              },
-              {
-                label: 'Publicações',
-                data: d.posts,
-                borderColor: '#06b6d4', borderWidth: 2,
-                backgroundColor: 'transparent',
-                pointBackgroundColor: '#06b6d4',
-                pointRadius: d.posts.length > 30 ? 0 : 3,
-                pointHoverRadius: 5,
-                tension: 0.4, fill: false, yAxisID: 'y1',
-              }
-            ]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              legend: {
-                display: true,
-                labels: {
-                  color: chartColors().ticks,
-                  usePointStyle: true, pointStyle: 'circle',
-                  font: { size: 11 }, padding: 14,
-                }
-              },
-              tooltip: {
-                backgroundColor: '#1a1a1a',
-                borderColor: 'rgba(139,92,246,0.4)', borderWidth: 1,
-                titleColor: '#64748b', bodyColor: '#f1f5f9',
-                bodyFont: { size: 13, weight: '600' }, padding: 12,
-                callbacks: {
-                  label: c => c.datasetIndex === 0
-                    ? ' ' + fmt(c.parsed.y) + ' seguidores'
-                    : ' ' + fmt(c.parsed.y) + ' posts'
-                }
-              }
-            },
-            scales: {
-              x: { grid: { color: chartColors().grid }, ticks: { color: chartColors().ticks, font: { size: 11 }, maxTicksLimit: 8 } },
-              y: {
-                position: 'left',
-                grid: { color: chartColors().grid },
-                ticks: { color: '#a78bfa', font: { size: 11 }, callback: v => fmt(v) },
-              },
-              y1: {
-                position: 'right',
-                grid: { drawOnChartArea: false },
-                ticks: { color: '#22d3ee', font: { size: 11 }, callback: v => fmt(v) },
-              }
-            }
-          }
-        });
+        // Reset chart tab and render
+        _currentModalData = d;
+        _activeModalChart = 'followers';
+        renderModalChart('followers', d);
 
         gerarAnalise(d);
         document.getElementById('modal-btn-pdf').style.display = 'flex';
@@ -885,7 +957,7 @@
       const display = currentClientDisplay;
       const dates = d.dates || [];
       const range = dates.length ? (dates[0] === dates[dates.length-1] ? dates[0] : dates[0] + ' → ' + dates[dates.length-1]) : '—';
-      const chartImg = chartInst ? chartInst.toBase64Image() : null;
+      const chartImg = (_activeModalChart === 'followers' && chartInst) ? chartInst.toBase64Image() : null;
       const today = new Date().toLocaleDateString('pt-BR');
 
       function pf(n){n=Number(n);if(n>=1e6)return(n/1e6).toFixed(1).replace(/\.0$/,'')+'M';if(n>=1e3)return(n/1e3).toFixed(1).replace(/\.0$/,'')+'K';return n.toLocaleString('pt-BR');}
