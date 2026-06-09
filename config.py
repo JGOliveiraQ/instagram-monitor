@@ -12,7 +12,5 @@ CLIENTES = [
     "drwagnervieira",
     "drjacqueshouly",
     "iracemafonsecadra",
-    "mannarinomatheus",
-    "dr.marciolamblet",
     "jgoliveiraq",
 ]
